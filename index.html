@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>HiveToken Testnet</title>
 
   <style>
@@ -55,13 +54,9 @@
   <div class="box">
     <h2>Wallet</h2>
 
-    <button id="connect">
-      Connect Wallet
-    </button>
+    <button id="connect">Connect Wallet</button>
 
-    <p id="wallet">
-      Not connected
-    </p>
+    <p id="wallet">Not connected</p>
   </div>
 
   <div class="box">
@@ -71,26 +66,31 @@
     <p>Owner Allocation: 150,000</p>
     <p>Liquidity Allocation: 850,000</p>
 
-    <p>
-      Buy/Sell tax will be added after the basic token passes testing.
-    </p>
+    <button id="deploy">
+      Deploy HiveToken
+    </button>
   </div>
 
   <div class="box">
     <h2>Status</h2>
 
     <p id="status">
-      Deployment controls will be added next.
+      Connect your wallet first.
     </p>
 
     <p id="contract"></p>
   </div>
+
+  <script src="./hive-bytecode.js"></script>
 
   <script>
     const TESTNET_CHAIN_ID = '0x61';
 
     const walletText = document.getElementById('wallet');
     const statusText = document.getElementById('status');
+    const contractText = document.getElementById('contract');
+
+    let account = null;
 
     async function connectWallet() {
       if (!window.ethereum) {
@@ -128,10 +128,11 @@
           method: 'eth_requestAccounts'
         });
 
-        walletText.textContent = accounts[0];
+        account = accounts[0];
+        walletText.textContent = account;
 
         statusText.textContent =
-          'Wallet connected to BNB Smart Chain Testnet.';
+          'Wallet connected. Ready to deploy on BNB Testnet.';
 
       } catch (error) {
         statusText.textContent =
@@ -139,9 +140,69 @@
       }
     }
 
+    async function deployToken() {
+      if (!account) {
+        statusText.textContent =
+          'Connect your wallet first.';
+        return;
+      }
+
+      if (!window.HIVE_BYTECODE) {
+        statusText.textContent =
+          'Deployment bytecode not found.';
+        return;
+      }
+
+      try {
+        statusText.textContent =
+          'Confirm the deployment in your wallet...';
+
+        const txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: account,
+            data: window.HIVE_BYTECODE
+          }]
+        });
+
+        statusText.textContent =
+          'Deployment submitted. Waiting for confirmation...';
+
+        let receipt = null;
+
+        while (!receipt) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+
+          receipt = await window.ethereum.request({
+            method: 'eth_getTransactionReceipt',
+            params: [txHash]
+          });
+        }
+
+        if (receipt.status === '0x1') {
+          statusText.textContent =
+            'HiveToken deployed successfully!';
+
+          contractText.textContent =
+            'Contract: ' + receipt.contractAddress;
+        } else {
+          statusText.textContent =
+            'Deployment transaction failed.';
+        }
+
+      } catch (error) {
+        statusText.textContent =
+          error.message || 'Deployment failed.';
+      }
+    }
+
     document
       .getElementById('connect')
       .addEventListener('click', connectWallet);
+
+    document
+      .getElementById('deploy')
+      .addEventListener('click', deployToken);
   </script>
 
 </body>
