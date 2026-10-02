@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HiveToken Testnet</title>
+  <title>HiveToken V2 Testnet</title>
 
   <style>
     body {
@@ -45,7 +45,7 @@
 
 <body>
 
-  <h1>🐝 HiveToken</h1>
+  <h1>🐝 HiveToken V2</h1>
 
   <p class="warning">
     BNB SMART CHAIN TESTNET ONLY
@@ -60,14 +60,17 @@
   </div>
 
   <div class="box">
-    <h2>HiveToken Test</h2>
+    <h2>HiveToken Tax Test</h2>
 
     <p>Fixed Supply: 1,000,000 HIVE</p>
-    <p>Owner Allocation: 150,000</p>
-    <p>Liquidity Allocation: 850,000</p>
+    <p>Owner Allocation: 150,000 HIVE</p>
+    <p>Liquidity Allocation: 850,000 HIVE</p>
+    <p>Buy Tax: 2.5%</p>
+    <p>Sell Tax: 2.5%</p>
+    <p>Wallet Transfers: 0%</p>
 
     <button id="deploy">
-      Deploy HiveToken
+      Deploy HiveToken V2
     </button>
   </div>
 
@@ -86,11 +89,31 @@
   <script>
     const TESTNET_CHAIN_ID = '0x61';
 
-    const walletText = document.getElementById('wallet');
-    const statusText = document.getElementById('status');
-    const contractText = document.getElementById('contract');
+    // PancakeSwap V2 Router - BSC Testnet
+    const PANCAKE_ROUTER =
+      '0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
+
+    // Temporary TESTNET Hive receiver
+    const HIVE_RECEIVER =
+      '0x77Dc64A638100407F756393dF33640d5cDf45619';
+
+    const walletText =
+      document.getElementById('wallet');
+
+    const statusText =
+      document.getElementById('status');
+
+    const contractText =
+      document.getElementById('contract');
 
     let account = null;
+
+    function encodeAddress(address) {
+      return address
+        .toLowerCase()
+        .replace(/^0x/, '')
+        .padStart(64, '0');
+    }
 
     async function connectWallet() {
       if (!window.ethereum) {
@@ -102,45 +125,57 @@
       try {
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: TESTNET_CHAIN_ID }]
+          params: [{
+            chainId: TESTNET_CHAIN_ID
+          }]
         }).catch(async () => {
+
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: TESTNET_CHAIN_ID,
               chainName: 'BNB Smart Chain Testnet',
+
               nativeCurrency: {
                 name: 'tBNB',
                 symbol: 'tBNB',
                 decimals: 18
               },
+
               rpcUrls: [
                 'https://data-seed-prebsc-1-s1.bnbchain.org:8545'
               ],
+
               blockExplorerUrls: [
                 'https://testnet.bscscan.com'
               ]
             }]
           });
+
         });
 
-        const accounts = await window.ethereum.request({
-          method: 'eth_requestAccounts'
-        });
+        const accounts =
+          await window.ethereum.request({
+            method: 'eth_requestAccounts'
+          });
 
         account = accounts[0];
+
         walletText.textContent = account;
 
         statusText.textContent =
-          'Wallet connected. Ready to deploy on BNB Testnet.';
+          'Wallet connected. Ready to deploy HiveToken V2 on BNB Testnet.';
 
       } catch (error) {
+
         statusText.textContent =
-          error.message || 'Wallet connection failed.';
+          error.message ||
+          'Wallet connection failed.';
       }
     }
 
     async function deployToken() {
+
       if (!account) {
         statusText.textContent =
           'Connect your wallet first.';
@@ -154,16 +189,42 @@
       }
 
       try {
-        statusText.textContent =
-          'Confirm the deployment in your wallet...';
 
-        const txHash = await window.ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from: account,
-            data: window.HIVE_BYTECODE
-          }]
-        });
+        /*
+          HiveToken V2 constructor:
+
+          constructor(
+            address routerAddress,
+            address payable hiveFundingAddress
+          )
+
+          Solidity ABI encoding for each address
+          occupies 32 bytes.
+        */
+
+        const routerArg =
+          encodeAddress(PANCAKE_ROUTER);
+
+        const hiveArg =
+          encodeAddress(HIVE_RECEIVER);
+
+        const deploymentData =
+          window.HIVE_BYTECODE +
+          routerArg +
+          hiveArg;
+
+        statusText.textContent =
+          'Confirm the V2 TESTNET deployment in your wallet...';
+
+        const txHash =
+          await window.ethereum.request({
+            method: 'eth_sendTransaction',
+
+            params: [{
+              from: account,
+              data: deploymentData
+            }]
+          });
 
         statusText.textContent =
           'Deployment submitted. Waiting for confirmation...';
@@ -171,38 +232,57 @@
         let receipt = null;
 
         while (!receipt) {
-          await new Promise(resolve => setTimeout(resolve, 3000));
 
-          receipt = await window.ethereum.request({
-            method: 'eth_getTransactionReceipt',
-            params: [txHash]
-          });
+          await new Promise(
+            resolve =>
+              setTimeout(resolve, 3000)
+          );
+
+          receipt =
+            await window.ethereum.request({
+              method:
+                'eth_getTransactionReceipt',
+
+              params: [txHash]
+            });
         }
 
         if (receipt.status === '0x1') {
+
           statusText.textContent =
-            'HiveToken deployed successfully!';
+            'HiveToken V2 deployed successfully!';
 
           contractText.textContent =
-            'Contract: ' + receipt.contractAddress;
+            'Contract: ' +
+            receipt.contractAddress;
+
         } else {
+
           statusText.textContent =
             'Deployment transaction failed.';
         }
 
       } catch (error) {
+
         statusText.textContent =
-          error.message || 'Deployment failed.';
+          error.message ||
+          'Deployment failed.';
       }
     }
 
     document
       .getElementById('connect')
-      .addEventListener('click', connectWallet);
+      .addEventListener(
+        'click',
+        connectWallet
+      );
 
     document
       .getElementById('deploy')
-      .addEventListener('click', deployToken);
+      .addEventListener(
+        'click',
+        deployToken
+      );
   </script>
 
 </body>
