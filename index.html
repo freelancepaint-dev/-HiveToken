@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>HiveToken Testnet</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #11150f;
+      color: #f5f1df;
+      max-width: 650px;
+      margin: auto;
+      padding: 25px;
+    }
+
+    .box {
+      border: 1px solid #555;
+      border-radius: 18px;
+      padding: 22px;
+      margin-top: 20px;
+    }
+
+    button {
+      font-size: 18px;
+      font-weight: bold;
+      padding: 15px 20px;
+      margin: 8px 0;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .warning {
+      color: #ffd166;
+      font-weight: bold;
+    }
+
+    #wallet, #contract, #status {
+      word-break: break-all;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🐝 HiveToken</h1>
+
+  <p class="warning">
+    BNB SMART CHAIN TESTNET ONLY
+  </p>
+
+  <div class="box">
+    <h2>Wallet</h2>
+
+    <button id="connect">
+      Connect Wallet
+    </button>
+
+    <p id="wallet">
+      Not connected
+    </p>
+  </div>
+
+  <div class="box">
+    <h2>HiveToken Test</h2>
+
+    <p>Fixed Supply: 1,000,000 HIVE</p>
+    <p>Owner Allocation: 150,000</p>
+    <p>Liquidity Allocation: 850,000</p>
+
+    <p>
+      Buy/Sell tax will be added after the basic token passes testing.
+    </p>
+  </div>
+
+  <div class="box">
+    <h2>Status</h2>
+
+    <p id="status">
+      Deployment controls will be added next.
+    </p>
+
+    <p id="contract"></p>
+  </div>
+
+  <script>
+    const TESTNET_CHAIN_ID = '0x61';
+
+    const walletText = document.getElementById('wallet');
+    const statusText = document.getElementById('status');
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        statusText.textContent =
+          'Open this page inside a Web3 wallet browser.';
+        return;
+      }
+
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: TESTNET_CHAIN_ID }]
+        }).catch(async () => {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: TESTNET_CHAIN_ID,
+              chainName: 'BNB Smart Chain Testnet',
+              nativeCurrency: {
+                name: 'tBNB',
+                symbol: 'tBNB',
+                decimals: 18
+              },
+              rpcUrls: [
+                'https://data-seed-prebsc-1-s1.bnbchain.org:8545'
+              ],
+              blockExplorerUrls: [
+                'https://testnet.bscscan.com'
+              ]
+            }]
+          });
+        });
+
+        const accounts = await window.ethereum.request({
+          method: 'eth_requestAccounts'
+        });
+
+        walletText.textContent = accounts[0];
+
+        statusText.textContent =
+          'Wallet connected to BNB Smart Chain Testnet.';
+
+      } catch (error) {
+        statusText.textContent =
+          error.message || 'Wallet connection failed.';
+      }
+    }
+
+    document
+      .getElementById('connect')
+      .addEventListener('click', connectWallet);
+  </script>
+
+</body>
+</html>
