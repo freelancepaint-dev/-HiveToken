@@ -61,7 +61,8 @@
     #wallet,
     #contract,
     #status,
-    #liquidityStatus {
+    #liquidityStatus,
+    #buyStatus {
       word-break: break-all;
     }
   </style>
@@ -150,6 +151,40 @@
   </div>
 
   <div class="box">
+    <h2>Test Buy HIVE</h2>
+
+    <p class="warning">
+      WALLET 2 — TESTNET ONLY
+    </p>
+
+    <p class="small">
+      This test buys HIVE through the PancakeSwap V2
+      testnet liquidity pair so we can verify the
+      2.5% buy tax.
+    </p>
+
+    <label for="buyBnbAmount">
+      tBNB to spend
+    </label>
+
+    <input
+      id="buyBnbAmount"
+      type="number"
+      value="0.001"
+      min="0"
+      step="0.0001"
+    >
+
+    <button id="buyHive">
+      Test Buy HIVE
+    </button>
+
+    <p id="buyStatus">
+      Connect Wallet 2 first.
+    </p>
+  </div>
+
+  <div class="box">
     <h2>Status</h2>
 
     <p id="status">
@@ -187,6 +222,9 @@
 
     const liquidityStatus =
       document.getElementById('liquidityStatus');
+
+    const buyStatus =
+      document.getElementById('buyStatus');
 
     let account = null;
 
@@ -283,7 +321,10 @@
           'Wallet connected on BNB Testnet.';
 
         liquidityStatus.textContent =
-          'Ready. Approve HIVE first.';
+          'Ready.';
+
+        buyStatus.textContent =
+          'Ready for TESTNET buy.';
 
       } catch (error) {
         statusText.textContent =
@@ -385,7 +426,6 @@
           );
         }
 
-        // approve(address,uint256)
         const selector = '095ea7b3';
 
         const data =
@@ -443,24 +483,8 @@
           );
         }
 
-        /*
-          addLiquidityETH(
-            address token,
-            uint amountTokenDesired,
-            uint amountTokenMin,
-            uint amountETHMin,
-            address to,
-            uint deadline
-          )
-
-          Selector:
-          0xf305d719
-        */
-
         const selector = 'f305d719';
 
-        // First-liquidity TESTNET transaction.
-        // Minimums are set equal to desired amounts.
         const amountTokenMin = hiveWei;
         const amountETHMin = bnbWei;
 
@@ -498,6 +522,96 @@
       }
     }
 
+    async function testBuyHive() {
+      if (!account) {
+        buyStatus.textContent =
+          'Connect Wallet 2 first.';
+        return;
+      }
+
+      try {
+        const bnbInput =
+          document.getElementById('buyBnbAmount').value;
+
+        const bnbWei =
+          parseUnits(bnbInput, 18);
+
+        if (bnbWei <= 0n) {
+          throw new Error(
+            'tBNB amount must be greater than zero.'
+          );
+        }
+
+        /*
+          swapExactETHForTokensSupportingFeeOnTransferTokens(
+            uint amountOutMin,
+            address[] path,
+            address to,
+            uint deadline
+          )
+
+          Function selector:
+          0xb6f9de95
+
+          Dynamic ABI layout:
+
+          word 1: amountOutMin = 0
+          word 2: offset to path = 0x80
+          word 3: recipient
+          word 4: deadline
+
+          path:
+          word 5: length = 2
+          word 6: WBNB
+          word 7: HIVE
+        */
+
+        const selector = 'b6f9de95';
+
+        // PancakeSwap BSC Testnet WBNB
+        const WBNB =
+          '0xae13d989dac2f0debff460ac112a837c89baa7cd';
+
+        const amountOutMin = 0n;
+        const pathOffset = 128n;
+        const pathLength = 2n;
+
+        const data =
+          '0x' +
+          selector +
+          encodeUint(amountOutMin) +
+          encodeUint(pathOffset) +
+          encodeAddress(account) +
+          encodeUint(deadlineHex()) +
+          encodeUint(pathLength) +
+          encodeAddress(WBNB) +
+          encodeAddress(HIVE_TOKEN);
+
+        buyStatus.textContent =
+          'Confirm TESTNET HIVE buy in your wallet...';
+
+        const txHash =
+          await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [{
+              from: account,
+              to: PANCAKE_ROUTER,
+              value:
+                '0x' + bnbWei.toString(16),
+              data: data
+            }]
+          });
+
+        buyStatus.textContent =
+          'Buy submitted: ' + txHash;
+
+      } catch (error) {
+        buyStatus.textContent =
+          error.message ||
+          'Test buy failed.';
+      }
+    }
+
     document
       .getElementById('connect')
       .addEventListener(
@@ -524,6 +638,13 @@
       .addEventListener(
         'click',
         addTestLiquidity
+      );
+
+    document
+      .getElementById('buyHive')
+      .addEventListener(
+        'click',
+        testBuyHive
       );
   </script>
 
