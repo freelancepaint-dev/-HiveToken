@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>HiveToken V3 Diagnostic</title>
+<title>HiveToken V3 Tax Test</title>
 
 <style>
 body {
@@ -14,7 +13,6 @@ body {
   margin:0;
   padding:20px;
 }
-
 .card {
   max-width:650px;
   margin:auto;
@@ -23,31 +21,7 @@ body {
   border-radius:18px;
   padding:22px;
 }
-
-h1 {
-  color:#ffd45c;
-}
-
-button {
-  width:100%;
-  padding:17px;
-  margin-top:12px;
-  border:0;
-  border-radius:12px;
-  font-size:17px;
-  font-weight:bold;
-}
-
-.primary {
-  background:#ffd45c;
-  color:#111;
-}
-
-.secondary {
-  background:#eee;
-  color:#111;
-}
-
+h1 { color:#ffd45c; }
 .box {
   background:#050705;
   padding:15px;
@@ -56,25 +30,32 @@ button {
   overflow-wrap:anywhere;
   line-height:1.6;
 }
-
-.label {
-  color:#aaa;
+button {
+  width:100%;
+  padding:17px;
+  margin-top:15px;
+  border:0;
+  border-radius:12px;
+  font-size:17px;
+  font-weight:bold;
 }
-
+.connect {
+  background:#eee;
+  color:#111;
+}
+.buy {
+  background:#ffd45c;
+  color:#111;
+}
 .good {
   color:#55ef7a;
   font-weight:bold;
 }
-
 .bad {
   color:#ff5c5c;
   font-weight:bold;
 }
-
-.warning {
-  color:#ffd45c;
-  font-weight:bold;
-}
+.label { color:#aaa; }
 </style>
 </head>
 
@@ -82,72 +63,81 @@ button {
 
 <div class="card">
 
-<h1>HiveToken V3 Diagnostic</h1>
+<h1>HiveToken V3 Tax Test</h1>
 
 <p>
-Read-only test. This page does not submit token transactions.
+BSC Testnet only. This test buys exactly
+<strong>0.001 tBNB</strong> of HIVE.
 </p>
 
 <div class="box">
-<span class="label">V3 Token</span><br>
+<span class="label">HiveToken V3</span><br>
 0xf10f0091a7504761e5e0cab7a7de34df077871f8
 </div>
 
 <div class="box">
-<span class="label">Expected Pair</span><br>
-0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6
+<span class="label">HIVE Recipient — LOCKED</span><br>
+0x77Dc64A638100407F756393dF33640d5cDf45619
+<br><br>
+<span class="good">Confirmed non-tax-exempt ✅</span>
 </div>
 
-<button class="primary" onclick="connectAndSwitch()">
-1. Connect + Switch to BSC Testnet
+<div class="box">
+<span class="label">Test Amount</span><br>
+0.001 tBNB
+</div>
+
+<button class="connect" onclick="connectWallet()">
+1. Connect + Confirm BSC Testnet
 </button>
 
-<button class="secondary" onclick="runChecks()">
-2. Run V3 Contract Checks
+<button class="buy" onclick="testBuy()">
+2. Test 0.001 tBNB Buy
 </button>
 
-<div id="connection" class="box">
-Not connected.
-</div>
-
-<div id="results" class="box">
-Checks not run.
+<div id="status" class="box">
+Ready.
 </div>
 
 </div>
-
 
 <script>
 
-const TOKEN =
+const ROUTER =
+"0xD99D1c33F9fC3444f8101754aBC46c52416550D1";
+
+const WBNB =
+"0xae13d989dac2f0debff460ac112a837c89baa7cd";
+
+const HIVE =
 "0xf10f0091a7504761e5e0cab7a7de34df077871f8";
 
-const EXPECTED_PAIR =
-"0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6";
+const RECIPIENT =
+"0x77Dc64A638100407F756393dF33640d5cDf45619";
 
-const TESTNET_CHAIN =
-"0x61";
+const CHAIN_ID = "0x61";
 
-let account = null;
+const BUY_VALUE =
+"0x38d7ea4c68000"; // exactly 0.001 BNB
+
+let connectedAccount = null;
 
 
-/* --------------------------
-   CONNECT + FORCE TESTNET
---------------------------- */
+/* --------------------------------
+   CONNECT
+-------------------------------- */
 
-async function connectAndSwitch() {
+async function connectWallet() {
 
   const status =
-    document.getElementById("connection");
+    document.getElementById("status");
 
   try {
 
     if (!window.ethereum) {
-
-      status.innerHTML =
-        "<span class='bad'>No wallet provider found.</span>";
-
-      return;
+      throw new Error(
+        "Open this page inside your wallet browser."
+      );
     }
 
     const accounts =
@@ -155,470 +145,256 @@ async function connectAndSwitch() {
         method:"eth_requestAccounts"
       });
 
-    account = accounts[0];
+    connectedAccount = accounts[0];
 
     let chain =
       await window.ethereum.request({
         method:"eth_chainId"
       });
 
+    if (chain.toLowerCase() !== CHAIN_ID) {
 
-    if (chain.toLowerCase() !== TESTNET_CHAIN) {
-
-      status.innerHTML =
-        "<span class='warning'>Switching to BSC Testnet...</span>";
-
-      try {
-
-        await window.ethereum.request({
-          method:"wallet_switchEthereumChain",
-          params:[
-            {
-              chainId:TESTNET_CHAIN
-            }
-          ]
-        });
-
-      } catch (switchError) {
-
-        /*
-          4902 means the network isn't configured
-          in the wallet yet.
-        */
-
-        if (switchError.code === 4902) {
-
-          await window.ethereum.request({
-            method:"wallet_addEthereumChain",
-            params:[
-              {
-                chainId:"0x61",
-                chainName:"BSC Testnet",
-                nativeCurrency:{
-                  name:"tBNB",
-                  symbol:"tBNB",
-                  decimals:18
-                },
-                rpcUrls:[
-                  "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
-                ],
-                blockExplorerUrls:[
-                  "https://testnet.bscscan.com"
-                ]
-              }
-            ]
-          });
-
-        } else {
-
-          throw switchError;
-        }
-      }
-    }
-
-
-    chain =
       await window.ethereum.request({
-        method:"eth_chainId"
+        method:"wallet_switchEthereumChain",
+        params:[
+          { chainId:CHAIN_ID }
+        ]
       });
 
+      chain =
+        await window.ethereum.request({
+          method:"eth_chainId"
+        });
+    }
+
+    if (chain.toLowerCase() !== CHAIN_ID) {
+      throw new Error(
+        "Wallet is not on BSC Testnet."
+      );
+    }
 
     status.innerHTML = `
-
-      <span class="label">Wallet</span><br>
-      ${account}
-
-      <br><br>
-
-      <span class="label">Chain ID</span><br>
-      ${chain}
+      <span class="good">
+      BSC Testnet confirmed ✅
+      </span>
 
       <br><br>
 
-      ${
-        chain.toLowerCase() === TESTNET_CHAIN
+      <span class="label">
+      Transaction-paying wallet
+      </span><br>
 
-        ? "<span class='good'>BSC Testnet confirmed ✅</span>"
+      ${connectedAccount}
 
-        : "<span class='bad'>Wrong network ❌</span>"
-      }
+      <br><br>
 
+      <span class="label">
+      HIVE will be sent to
+      </span><br>
+
+      ${RECIPIENT}
     `;
 
   } catch(error) {
 
     status.innerHTML =
-      "<span class='bad'>Connection error:</span><br>" +
+      "<span class='bad'>ERROR</span><br>" +
       error.message;
   }
 }
 
 
-/* --------------------------
-   FUNCTION SELECTOR
---------------------------- */
+/* --------------------------------
+   ABI HELPERS
+-------------------------------- */
 
-async function selector(signature) {
-
-  const bytes =
-    new TextEncoder().encode(signature);
-
-  let hex = "0x";
-
-  for (const byte of bytes) {
-
-    hex +=
-      byte.toString(16).padStart(2,"0");
-  }
-
-  const hash =
-    await window.ethereum.request({
-      method:"web3_sha3",
-      params:[hex]
-    });
-
-  return hash.slice(0,10);
+function strip0x(value) {
+  return value.toLowerCase().replace("0x","");
 }
 
+function encodeUint(value) {
 
-/* --------------------------
-   READ CONTRACT
---------------------------- */
-
-async function callContract(data) {
-
-  return await window.ethereum.request({
-
-    method:"eth_call",
-
-    params:[
-      {
-        to:TOKEN,
-        data:data
-      },
-      "latest"
-    ]
-  });
+  return BigInt(value)
+    .toString(16)
+    .padStart(64,"0");
 }
-
-
-/* --------------------------
-   DECODERS
---------------------------- */
-
-function decodeAddress(data) {
-
-  if (!data || data === "0x")
-    return null;
-
-  return (
-    "0x" +
-    data.slice(-40)
-  );
-}
-
-
-function decodeUint(data) {
-
-  if (!data || data === "0x")
-    return null;
-
-  return BigInt(data).toString();
-}
-
-
-function decodeBool(data) {
-
-  if (!data || data === "0x")
-    return null;
-
-  return BigInt(data) !== 0n;
-}
-
 
 function encodeAddress(address) {
 
-  return address
-    .toLowerCase()
-    .replace("0x","")
+  return strip0x(address)
     .padStart(64,"0");
 }
 
 
-/* --------------------------
-   RUN ALL CHECKS
---------------------------- */
+/* --------------------------------
+   BUY
+-------------------------------- */
 
-async function runChecks() {
+async function testBuy() {
 
-  const output =
-    document.getElementById("results");
+  const status =
+    document.getElementById("status");
 
   try {
 
     if (!window.ethereum) {
-
-      output.innerHTML =
-        "<span class='bad'>No wallet provider.</span>";
-
-      return;
+      throw new Error("Wallet provider not found.");
     }
 
+    if (!connectedAccount) {
+      throw new Error(
+        "Tap Connect + Confirm BSC Testnet first."
+      );
+    }
 
     const chain =
       await window.ethereum.request({
         method:"eth_chainId"
       });
 
-
-    if (
-      chain.toLowerCase() !==
-      TESTNET_CHAIN
-    ) {
-
-      output.innerHTML =
-        "<span class='bad'>" +
-        "STOP — wallet is not on BSC Testnet." +
-        "</span><br><br>" +
-        "Tap Connect + Switch to BSC Testnet first.";
-
-      return;
+    if (chain.toLowerCase() !== CHAIN_ID) {
+      throw new Error(
+        "STOP — wallet is not on BSC Testnet."
+      );
     }
 
 
-    output.innerHTML =
-      "Reading deployed V3 contract...";
+    /*
+      PancakeSwap V2:
+
+      swapExactETHForTokensSupportingFeeOnTransferTokens(
+        uint amountOutMin,
+        address[] path,
+        address to,
+        uint deadline
+      )
+
+      selector:
+      0xb6f9de95
+    */
 
 
-    /* CALCULATE ALL SELECTORS */
-
-    const ownerSelector =
-      await selector("owner()");
-
-    const pairSelector =
-      await selector("pair()");
-
-    const lockedSelector =
-      await selector("pairLocked()");
-
-    const buySelector =
-      await selector("BUY_TAX()");
-
-    const sellSelector =
-      await selector("SELL_TAX()");
-
-    const thresholdSelector =
-      await selector("swapThreshold()");
-
-    const exemptSelector =
-      await selector("isTaxExempt(address)");
-
-    const hiveSelector =
-      await selector("hiveAddress()");
-
-    const routerSelector =
-      await selector("router()");
+    const selector =
+      "b6f9de95";
 
 
-    /* READ CONTRACT */
+    /*
+      ABI head:
 
-    const owner =
-      decodeAddress(
-        await callContract(ownerSelector)
-      );
+      amountOutMin = 0
 
-    const pair =
-      decodeAddress(
-        await callContract(pairSelector)
-      );
+      path offset = 0x80
+      because the static head is 4 x 32 bytes
 
-    const pairLocked =
-      decodeBool(
-        await callContract(lockedSelector)
-      );
+      to = locked non-exempt recipient
 
-    const buyTax =
-      decodeUint(
-        await callContract(buySelector)
-      );
+      deadline = now + 20 minutes
+    */
 
-    const sellTax =
-      decodeUint(
-        await callContract(sellSelector)
-      );
 
-    const threshold =
-      decodeUint(
-        await callContract(thresholdSelector)
-      );
+    const amountOutMin =
+      encodeUint(0);
 
-    const hiveAddress =
-      decodeAddress(
-        await callContract(hiveSelector)
-      );
+    const pathOffset =
+      encodeUint(128);
 
-    const router =
-      decodeAddress(
-        await callContract(routerSelector)
+    const recipient =
+      encodeAddress(RECIPIENT);
+
+    const deadline =
+      encodeUint(
+        Math.floor(Date.now()/1000) + 1200
       );
 
 
-    /* OWNER EXEMPT */
+    /*
+      Dynamic path:
 
-    let ownerExempt = null;
-
-    if (owner) {
-
-      ownerExempt =
-        decodeBool(
-          await callContract(
-            exemptSelector +
-            encodeAddress(owner)
-          )
-        );
-    }
+      length = 2
+      path[0] = WBNB
+      path[1] = HIVE
+    */
 
 
-    /* CONNECTED WALLET EXEMPT */
+    const pathLength =
+      encodeUint(2);
 
-    let walletExempt =
-      "Wallet not connected";
+    const path0 =
+      encodeAddress(WBNB);
 
-    if (account) {
-
-      walletExempt =
-        decodeBool(
-          await callContract(
-            exemptSelector +
-            encodeAddress(account)
-          )
-        );
-    }
+    const path1 =
+      encodeAddress(HIVE);
 
 
-    /* PAIR EXEMPT */
-
-    let pairExempt = null;
-
-    if (pair) {
-
-      pairExempt =
-        decodeBool(
-          await callContract(
-            exemptSelector +
-            encodeAddress(pair)
-          )
-        );
-    }
+    const data =
+      "0x" +
+      selector +
+      amountOutMin +
+      pathOffset +
+      recipient +
+      deadline +
+      pathLength +
+      path0 +
+      path1;
 
 
-    const pairMatch =
-      pair &&
-      pair.toLowerCase() ===
-      EXPECTED_PAIR.toLowerCase();
-
-
-    output.innerHTML = `
-
-      <b>V3 ON-CHAIN RESULTS</b>
+    status.innerHTML = `
+      <span class="good">
+      Ready to request wallet confirmation.
+      </span>
 
       <br><br>
 
-      <span class="label">Owner</span><br>
-      ${owner || "NO RETURN DATA"}
+      Amount: 0.001 tBNB
 
       <br><br>
 
-      <span class="label">Stored Pair</span><br>
-      ${pair || "NO RETURN DATA"}
+      HIVE recipient:<br>
+      ${RECIPIENT}
+    `;
 
-      <br>
 
-      ${
-        pairMatch
+    const txHash =
+      await window.ethereum.request({
 
-        ? "<span class='good'>Pair Match: YES ✅</span>"
+        method:"eth_sendTransaction",
 
-        : "<span class='bad'>Pair Match: NO ❌</span>"
-      }
+        params:[
+          {
+            from:connectedAccount,
+            to:ROUTER,
+            value:BUY_VALUE,
+            data:data
+          }
+        ]
+      });
 
-      <br><br>
 
-      <span class="label">Pair Locked</span><br>
-      ${pairLocked}
-
-      <br><br>
-
-      <span class="label">BUY_TAX</span><br>
-      ${buyTax}
-
-      ${
-        buyTax === "250"
-        ? "<span class='good'> — 2.5% ✅</span>"
-        : "<span class='bad'> ❌</span>"
-      }
-
-      <br><br>
-
-      <span class="label">SELL_TAX</span><br>
-      ${sellTax}
-
-      ${
-        sellTax === "250"
-        ? "<span class='good'> — 2.5% ✅</span>"
-        : "<span class='bad'> ❌</span>"
-      }
-
-      <br><br>
-
-      <span class="label">Swap Threshold</span><br>
-      ${threshold || "NO RETURN DATA"}
-
-      <br>
-
-      Expected:<br>
-      100000000000000000000
-      (100 HIVE)
-
-      <br><br>
-
-      <span class="label">Hive Funding Address</span><br>
-      ${hiveAddress || "NO RETURN DATA"}
-
-      <br><br>
-
-      <span class="label">Router</span><br>
-      ${router || "NO RETURN DATA"}
-
-      <br><br>
-
-      <span class="label">Owner Tax Exempt</span><br>
-      ${ownerExempt}
-
-      <br><br>
-
-      <span class="label">Pair Tax Exempt</span><br>
-      ${pairExempt}
+    status.innerHTML = `
+      <span class="good">
+      Transaction submitted ✅
+      </span>
 
       <br><br>
 
       <span class="label">
-      Connected Wallet Tax Exempt
+      Transaction Hash
       </span><br>
 
-      ${walletExempt}
+      ${txHash}
 
+      <br><br>
+
+      Wait for confirmation, then send me
+      the transaction hash or BscScan screenshot.
     `;
 
 
   } catch(error) {
 
-    output.innerHTML =
-
-      "<span class='bad'>CHECK FAILED</span>" +
-
+    status.innerHTML =
+      "<span class='bad'>TRANSACTION NOT SUBMITTED</span>" +
       "<br><br>" +
-
       error.message;
   }
 }
