@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /*
-    HiveToken - Tax Testnet V2
+    HiveToken - Tax Testnet V3
 
     Fixed Supply: 1,000,000 HIVE
     Buy Tax: 2.5%
@@ -15,16 +15,7 @@ pragma solidity ^0.8.20;
     TESTNET FIRST.
 */
 
-interface IPancakeFactory {
-    function createPair(
-        address tokenA,
-        address tokenB
-    ) external returns (address pair);
-}
-
 interface IPancakeRouter {
-    function factory() external pure returns (address);
-
     function WETH() external pure returns (address);
 
     function swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -51,7 +42,6 @@ contract HiveToken {
     uint256 public constant LIQUIDITY_ALLOCATION =
         850_000 * 10**18;
 
-    // 250 / 10,000 = 2.5%
     uint256 public constant BUY_TAX = 250;
     uint256 public constant SELL_TAX = 250;
     uint256 public constant TAX_DENOMINATOR = 10_000;
@@ -60,9 +50,11 @@ contract HiveToken {
     address payable public immutable hiveAddress;
 
     IPancakeRouter public immutable router;
+
     address public immutable pair;
 
     mapping(address => uint256) public balanceOf;
+
     mapping(address => mapping(address => uint256))
         public allowance;
 
@@ -70,8 +62,8 @@ contract HiveToken {
 
     bool private swapping;
 
-    // Swap accumulated tax once at least 100 HIVE is held.
-    uint256 public swapThreshold = 100 * 10**18;
+    uint256 public swapThreshold =
+        100 * 10**18;
 
     event Transfer(
         address indexed from,
@@ -97,11 +89,18 @@ contract HiveToken {
 
     constructor(
         address routerAddress,
+        address pairAddress,
         address payable hiveFundingAddress
     ) {
+
         require(
             routerAddress != address(0),
             "Zero router"
+        );
+
+        require(
+            pairAddress != address(0),
+            "Zero pair"
         );
 
         require(
@@ -110,19 +109,22 @@ contract HiveToken {
         );
 
         owner = msg.sender;
-        hiveAddress = hiveFundingAddress;
 
-        router = IPancakeRouter(routerAddress);
+        router =
+            IPancakeRouter(routerAddress);
 
-        pair = IPancakeFactory(router.factory()).createPair(
-            address(this),
-            router.WETH()
-        );
+        pair =
+            pairAddress;
+
+        hiveAddress =
+            hiveFundingAddress;
 
         isTaxExempt[msg.sender] = true;
+
         isTaxExempt[address(this)] = true;
 
-        balanceOf[msg.sender] = totalSupply;
+        balanceOf[msg.sender] =
+            totalSupply;
 
         emit Transfer(
             address(0),
@@ -137,7 +139,13 @@ contract HiveToken {
         address to,
         uint256 amount
     ) external returns (bool) {
-        _transfer(msg.sender, to, amount);
+
+        _transfer(
+            msg.sender,
+            to,
+            amount
+        );
+
         return true;
     }
 
@@ -145,7 +153,9 @@ contract HiveToken {
         address spender,
         uint256 amount
     ) external returns (bool) {
-        allowance[msg.sender][spender] = amount;
+
+        allowance[msg.sender][spender] =
+            amount;
 
         emit Approval(
             msg.sender,
@@ -170,7 +180,11 @@ contract HiveToken {
             "Allowance exceeded"
         );
 
-        if (allowed != type(uint256).max) {
+        if (
+            allowed !=
+            type(uint256).max
+        ) {
+
             allowance[from][msg.sender] =
                 allowed - amount;
 
@@ -181,7 +195,11 @@ contract HiveToken {
             );
         }
 
-        _transfer(from, to, amount);
+        _transfer(
+            from,
+            to,
+            amount
+        );
 
         return true;
     }
@@ -208,14 +226,17 @@ contract HiveToken {
         );
 
         /*
-            On sells, convert previously collected
-            HIVE tax into BNB before processing
-            the current transfer.
+            On a sell, accumulated HIVE tax
+            can be converted to BNB.
+
+            This check occurs BEFORE the
+            current sell's tax is collected.
         */
         if (
             to == pair &&
             !swapping &&
-            balanceOf[address(this)] >= swapThreshold
+            balanceOf[address(this)] >=
+                swapThreshold
         ) {
             _swapTaxForBNB();
         }
@@ -230,6 +251,7 @@ contract HiveToken {
 
             // BUY
             if (from == pair) {
+
                 taxAmount =
                     (amount * BUY_TAX) /
                     TAX_DENOMINATOR;
@@ -237,6 +259,7 @@ contract HiveToken {
 
             // SELL
             else if (to == pair) {
+
                 taxAmount =
                     (amount * SELL_TAX) /
                     TAX_DENOMINATOR;
@@ -246,9 +269,11 @@ contract HiveToken {
         uint256 sendAmount =
             amount - taxAmount;
 
-        balanceOf[from] -= amount;
+        balanceOf[from] -=
+            amount;
 
-        balanceOf[to] += sendAmount;
+        balanceOf[to] +=
+            sendAmount;
 
         emit Transfer(
             from,
@@ -274,7 +299,9 @@ contract HiveToken {
         }
     }
 
-    function _swapTaxForBNB() internal {
+    function _swapTaxForBNB()
+        internal
+    {
 
         uint256 tokenAmount =
             balanceOf[address(this)];
@@ -285,7 +312,8 @@ contract HiveToken {
 
         swapping = true;
 
-        allowance[address(this)][address(router)] =
+        allowance[address(this)]
+            [address(router)] =
             tokenAmount;
 
         emit Approval(
@@ -297,8 +325,11 @@ contract HiveToken {
         address[] memory path =
             new address[](2);
 
-        path[0] = address(this);
-        path[1] = router.WETH();
+        path[0] =
+            address(this);
+
+        path[1] =
+            router.WETH();
 
         uint256 balanceBefore =
             address(this).balance;
