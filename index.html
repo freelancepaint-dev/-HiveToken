@@ -6,9 +6,7 @@
   <title>HiveToken V3 Testnet</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -61,14 +59,13 @@
       cursor: pointer;
     }
 
-    button:active {
-      opacity: 0.8;
-    }
+    button:active { opacity: 0.8; }
 
     .status {
       margin-top: 18px;
       font-size: 20px;
       overflow-wrap: anywhere;
+      white-space: pre-wrap;
     }
 
     .important {
@@ -100,15 +97,12 @@
   <div class="card">
     <h2>1. Wallet</h2>
 
-    <button onclick="connectWallet()">
-      Connect Wallet
-    </button>
+    <button onclick="connectWallet()">Connect Wallet</button>
 
     <div id="walletStatus" class="status">
       Wallet not connected.
     </div>
   </div>
-
 
   <div class="card">
     <h2>2. HiveToken V3</h2>
@@ -125,13 +119,11 @@
     </div>
   </div>
 
-
   <div class="card">
     <h2>3. Verified HIVE/WBNB Pair</h2>
 
     <p class="small">
-      This pair has already been created and its token0/token1
-      addresses were checked on BSC Testnet.
+      This pair was verified on BSC Testnet using token0 and token1.
     </p>
 
     <div class="status">
@@ -149,27 +141,17 @@
     </div>
   </div>
 
-
   <div class="card">
-    <h2>4. Lock Pair Into HiveToken</h2>
+    <h2>4. Pair Lock</h2>
 
     <p class="important">
-      IMPORTANT: This can only be done once.
+      Pair setup has already been completed.
     </p>
 
     <p class="small">
-      This sets the verified HIVE/WBNB pair in the V3 HiveToken contract.
+      Do not attempt to set another pair.
     </p>
-
-    <button onclick="setPair()">
-      Set & Lock Pair
-    </button>
-
-    <div id="setPairStatus" class="status">
-      Pair has not been locked from this page yet.
-    </div>
   </div>
-
 
   <div class="card">
     <h2>5. Verify Stored Pair</h2>
@@ -187,8 +169,29 @@
     </div>
   </div>
 
-</div>
+  <div class="card">
+    <h2>6. Approve Test Liquidity</h2>
 
+    <p class="small">
+      Approves exactly 10,000 HIVE for the PancakeSwap V2
+      BSC Testnet router.
+    </p>
+
+    <p class="important">
+      This is an allowance only. It does not add liquidity
+      and does not transfer 10,000 HIVE by itself.
+    </p>
+
+    <button onclick="approveLiquidity()">
+      Approve 10,000 HIVE
+    </button>
+
+    <div id="approveStatus" class="status">
+      Approval not submitted.
+    </div>
+  </div>
+
+</div>
 
 <script>
 const TESTNET_CHAIN_ID = '0x61';
@@ -202,11 +205,10 @@ const VERIFIED_PAIR =
 const WBNB =
   '0xae13d989dac2f0debff460ac112a837c89baa7cd';
 
-let account = null;
+const PANCAKE_ROUTER =
+  '0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
 
-/* Keep these populated even after page refresh */
-let hiveToken = HIVE_TOKEN;
-let discoveredPair = VERIFIED_PAIR;
+let account = null;
 
 
 function padAddress(address) {
@@ -217,13 +219,19 @@ function padAddress(address) {
 }
 
 
+function padUint256(hexValue) {
+  return hexValue
+    .replace(/^0x/, '')
+    .padStart(64, '0');
+}
+
+
 async function connectWallet() {
   const status = document.getElementById('walletStatus');
 
   try {
     if (!window.ethereum) {
-      status.innerText =
-        'No injected wallet was detected.';
+      status.innerText = 'No injected wallet detected.';
       return;
     }
 
@@ -233,7 +241,7 @@ async function connectWallet() {
 
     if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
       status.innerText =
-        'Wrong network. Switch wallet to BNB Smart Chain Testnet.';
+        'Wrong network. Switch to BNB Smart Chain Testnet.';
       return;
     }
 
@@ -242,8 +250,7 @@ async function connectWallet() {
     });
 
     if (!accounts || !accounts.length) {
-      status.innerText =
-        'No wallet account connected.';
+      status.innerText = 'No wallet account connected.';
       return;
     }
 
@@ -254,93 +261,7 @@ async function connectWallet() {
 
   } catch (err) {
     status.innerText =
-      'Wallet connection error: ' +
-      (err.message || err);
-  }
-}
-
-
-async function getSetPairSelector() {
-  const result = await ethereum.request({
-    method: 'web3_sha3',
-    params: [
-      '0x' +
-      Array.from(
-        new TextEncoder().encode('setPair(address)')
-      )
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
-    ]
-  });
-
-  return result.slice(0, 10);
-}
-
-
-async function setPair() {
-  const status =
-    document.getElementById('setPairStatus');
-
-  try {
-    if (!window.ethereum) {
-      status.innerText =
-        'No wallet detected.';
-      return;
-    }
-
-    const chainId = await ethereum.request({
-      method: 'eth_chainId'
-    });
-
-    if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
-      status.innerText =
-        'STOP: Wallet is not on BNB Smart Chain Testnet.';
-      return;
-    }
-
-    if (!account) {
-      const accounts = await ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      if (!accounts || !accounts.length) {
-        status.innerText =
-          'Connect the deployment wallet first.';
-        return;
-      }
-
-      account = accounts[0];
-    }
-
-    const selector =
-      await getSetPairSelector();
-
-    const data =
-      selector +
-      padAddress(VERIFIED_PAIR);
-
-    status.innerText =
-      'Waiting for wallet confirmation...';
-
-    const txHash = await ethereum.request({
-      method: 'eth_sendTransaction',
-      params: [{
-        from: account,
-        to: HIVE_TOKEN,
-        value: '0x0',
-        data: data
-      }]
-    });
-
-    status.innerText =
-      'Pair lock transaction submitted:\n' +
-      txHash +
-      '\n\nWait for confirmation, then use Check Stored Pair.';
-
-  } catch (err) {
-    status.innerText =
-      'Set pair error: ' +
-      (err.message || err);
+      'Wallet connection error: ' + (err.message || err);
   }
 }
 
@@ -351,8 +272,7 @@ async function checkStoredPair() {
 
   try {
     if (!window.ethereum) {
-      status.innerText =
-        'No wallet detected.';
+      status.innerText = 'No wallet detected.';
       return;
     }
 
@@ -366,11 +286,6 @@ async function checkStoredPair() {
       return;
     }
 
-    /*
-      pair()
-      selector = 0xa8aa1b31
-    */
-
     const result = await ethereum.request({
       method: 'eth_call',
       params: [{
@@ -380,13 +295,11 @@ async function checkStoredPair() {
     });
 
     if (!result || result === '0x') {
-      status.innerText =
-        'Could not read pair().';
+      status.innerText = 'Could not read pair().';
       return;
     }
 
-    const storedPair =
-      '0x' + result.slice(-40);
+    const storedPair = '0x' + result.slice(-40);
 
     if (
       storedPair.toLowerCase() ===
@@ -407,13 +320,88 @@ async function checkStoredPair() {
 
   } catch (err) {
     status.innerText =
-      'Read error: ' +
-      (err.message || err);
+      'Read error: ' + (err.message || err);
   }
 }
 
 
-/* Automatically show wallet if permission already exists */
+async function approveLiquidity() {
+  const status =
+    document.getElementById('approveStatus');
+
+  try {
+    if (!window.ethereum) {
+      status.innerText = 'No wallet detected.';
+      return;
+    }
+
+    const chainId = await ethereum.request({
+      method: 'eth_chainId'
+    });
+
+    if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
+      status.innerText =
+        'STOP: Wallet is not on BNB Smart Chain Testnet.';
+      return;
+    }
+
+    if (!account) {
+      const accounts = await ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      if (!accounts || !accounts.length) {
+        status.innerText =
+          'Connect the HIVE holder wallet first.';
+        return;
+      }
+
+      account = accounts[0];
+    }
+
+    /*
+      approve(address,uint256)
+      selector = 0x095ea7b3
+
+      10,000 HIVE with 18 decimals:
+      10000 * 10^18
+      = 10000000000000000000000
+      = 0x21e19e0c9bab2400000
+    */
+
+    const amountHex =
+      '0x21e19e0c9bab2400000';
+
+    const data =
+      '0x095ea7b3' +
+      padAddress(PANCAKE_ROUTER) +
+      padUint256(amountHex);
+
+    status.innerText =
+      'Waiting for wallet confirmation...';
+
+    const txHash = await ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: account,
+        to: HIVE_TOKEN,
+        value: '0x0',
+        data: data
+      }]
+    });
+
+    status.innerText =
+      'Approval submitted:\n' +
+      txHash +
+      '\n\nDo not add liquidity yet.';
+
+  } catch (err) {
+    status.innerText =
+      'Approval error: ' + (err.message || err);
+  }
+}
+
+
 async function loadExistingWallet() {
   try {
     if (!window.ethereum) return;
