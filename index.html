@@ -1,99 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HiveToken V3 — Contract Check</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      background: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
+<title>HiveToken V3 Diagnostic</title>
 
-    .card {
-      max-width: 650px;
-      margin: auto;
-      background: #1c1c1c;
-      padding: 20px;
-      border-radius: 14px;
-    }
+<style>
+body {
+  background:#0b0f0b;
+  color:#fff;
+  font-family:Arial,sans-serif;
+  margin:0;
+  padding:20px;
+}
 
-    h1 {
-      color: #f5c542;
-    }
+.card {
+  max-width:650px;
+  margin:auto;
+  background:#151a15;
+  border:1px solid #3c473c;
+  border-radius:18px;
+  padding:22px;
+}
 
-    button {
-      width: 100%;
-      padding: 16px;
-      margin-top: 12px;
-      background: #f5c542;
-      color: #111;
-      border: 0;
-      border-radius: 10px;
-      font-size: 17px;
-      font-weight: bold;
-    }
+h1 {
+  color:#ffd45c;
+}
 
-    .result {
-      background: #090909;
-      padding: 14px;
-      margin-top: 15px;
-      border-radius: 10px;
-      overflow-wrap: anywhere;
-      line-height: 1.6;
-    }
+button {
+  width:100%;
+  padding:17px;
+  margin-top:12px;
+  border:0;
+  border-radius:12px;
+  font-size:17px;
+  font-weight:bold;
+}
 
-    .good {
-      color: #4cff72;
-    }
+.primary {
+  background:#ffd45c;
+  color:#111;
+}
 
-    .bad {
-      color: #ff5c5c;
-    }
+.secondary {
+  background:#eee;
+  color:#111;
+}
 
-    .label {
-      color: #aaa;
-    }
-  </style>
+.box {
+  background:#050705;
+  padding:15px;
+  margin-top:15px;
+  border-radius:12px;
+  overflow-wrap:anywhere;
+  line-height:1.6;
+}
+
+.label {
+  color:#aaa;
+}
+
+.good {
+  color:#55ef7a;
+  font-weight:bold;
+}
+
+.bad {
+  color:#ff5c5c;
+  font-weight:bold;
+}
+
+.warning {
+  color:#ffd45c;
+  font-weight:bold;
+}
+</style>
 </head>
 
 <body>
 
 <div class="card">
 
-  <h1>HiveToken V3</h1>
+<h1>HiveToken V3 Diagnostic</h1>
 
-  <p>
-    Read-only contract diagnostic.
-    This does not send any transactions.
-  </p>
+<p>
+Read-only test. This page does not submit token transactions.
+</p>
 
-  <div class="result">
-    <span class="label">V3 Token:</span><br>
-    0xf10f0091a7504761e5e0cab7a7de34df077871f8
-  </div>
+<div class="box">
+<span class="label">V3 Token</span><br>
+0xf10f0091a7504761e5e0cab7a7de34df077871f8
+</div>
 
-  <button onclick="connectWallet()">
-    Connect Wallet
-  </button>
+<div class="box">
+<span class="label">Expected Pair</span><br>
+0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6
+</div>
 
-  <button onclick="runChecks()">
-    Run V3 Contract Checks
-  </button>
+<button class="primary" onclick="connectAndSwitch()">
+1. Connect + Switch to BSC Testnet
+</button>
 
-  <div id="wallet" class="result">
-    Wallet: Not connected
-  </div>
+<button class="secondary" onclick="runChecks()">
+2. Run V3 Contract Checks
+</button>
 
-  <div id="results" class="result">
-    Contract checks not run.
-  </div>
+<div id="connection" class="box">
+Not connected.
+</div>
+
+<div id="results" class="box">
+Checks not run.
+</div>
 
 </div>
+
 
 <script>
 
@@ -103,59 +125,218 @@ const TOKEN =
 const EXPECTED_PAIR =
 "0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6";
 
+const TESTNET_CHAIN =
+"0x61";
+
 let account = null;
 
 
-/* ---------- READ-ONLY ETH_CALL ---------- */
+/* --------------------------
+   CONNECT + FORCE TESTNET
+--------------------------- */
 
-async function ethCall(data) {
+async function connectAndSwitch() {
 
-  const result =
+  const status =
+    document.getElementById("connection");
+
+  try {
+
+    if (!window.ethereum) {
+
+      status.innerHTML =
+        "<span class='bad'>No wallet provider found.</span>";
+
+      return;
+    }
+
+    const accounts =
+      await window.ethereum.request({
+        method:"eth_requestAccounts"
+      });
+
+    account = accounts[0];
+
+    let chain =
+      await window.ethereum.request({
+        method:"eth_chainId"
+      });
+
+
+    if (chain.toLowerCase() !== TESTNET_CHAIN) {
+
+      status.innerHTML =
+        "<span class='warning'>Switching to BSC Testnet...</span>";
+
+      try {
+
+        await window.ethereum.request({
+          method:"wallet_switchEthereumChain",
+          params:[
+            {
+              chainId:TESTNET_CHAIN
+            }
+          ]
+        });
+
+      } catch (switchError) {
+
+        /*
+          4902 means the network isn't configured
+          in the wallet yet.
+        */
+
+        if (switchError.code === 4902) {
+
+          await window.ethereum.request({
+            method:"wallet_addEthereumChain",
+            params:[
+              {
+                chainId:"0x61",
+                chainName:"BSC Testnet",
+                nativeCurrency:{
+                  name:"tBNB",
+                  symbol:"tBNB",
+                  decimals:18
+                },
+                rpcUrls:[
+                  "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
+                ],
+                blockExplorerUrls:[
+                  "https://testnet.bscscan.com"
+                ]
+              }
+            ]
+          });
+
+        } else {
+
+          throw switchError;
+        }
+      }
+    }
+
+
+    chain =
+      await window.ethereum.request({
+        method:"eth_chainId"
+      });
+
+
+    status.innerHTML = `
+
+      <span class="label">Wallet</span><br>
+      ${account}
+
+      <br><br>
+
+      <span class="label">Chain ID</span><br>
+      ${chain}
+
+      <br><br>
+
+      ${
+        chain.toLowerCase() === TESTNET_CHAIN
+
+        ? "<span class='good'>BSC Testnet confirmed ✅</span>"
+
+        : "<span class='bad'>Wrong network ❌</span>"
+      }
+
+    `;
+
+  } catch(error) {
+
+    status.innerHTML =
+      "<span class='bad'>Connection error:</span><br>" +
+      error.message;
+  }
+}
+
+
+/* --------------------------
+   FUNCTION SELECTOR
+--------------------------- */
+
+async function selector(signature) {
+
+  const bytes =
+    new TextEncoder().encode(signature);
+
+  let hex = "0x";
+
+  for (const byte of bytes) {
+
+    hex +=
+      byte.toString(16).padStart(2,"0");
+  }
+
+  const hash =
     await window.ethereum.request({
-      method: "eth_call",
-      params: [
-        {
-          to: TOKEN,
-          data: data
-        },
-        "latest"
-      ]
+      method:"web3_sha3",
+      params:[hex]
     });
 
-  return result;
+  return hash.slice(0,10);
 }
 
 
-/* ---------- DECODERS ---------- */
+/* --------------------------
+   READ CONTRACT
+--------------------------- */
 
-function decodeAddress(result) {
+async function callContract(data) {
 
-  if (!result || result === "0x")
-    return "NO RETURN DATA";
+  return await window.ethereum.request({
 
-  return "0x" + result.slice(-40);
+    method:"eth_call",
+
+    params:[
+      {
+        to:TOKEN,
+        data:data
+      },
+      "latest"
+    ]
+  });
 }
 
 
-function decodeUint(result) {
+/* --------------------------
+   DECODERS
+--------------------------- */
 
-  if (!result || result === "0x")
-    return "NO RETURN DATA";
+function decodeAddress(data) {
 
-  return BigInt(result).toString();
+  if (!data || data === "0x")
+    return null;
+
+  return (
+    "0x" +
+    data.slice(-40)
+  );
 }
 
 
-function decodeBool(result) {
+function decodeUint(data) {
 
-  if (!result || result === "0x")
-    return "NO RETURN DATA";
+  if (!data || data === "0x")
+    return null;
 
-  return BigInt(result) !== 0n;
+  return BigInt(data).toString();
 }
 
 
-function padAddress(address) {
+function decodeBool(data) {
+
+  if (!data || data === "0x")
+    return null;
+
+  return BigInt(data) !== 0n;
+}
+
+
+function encodeAddress(address) {
 
   return address
     .toLowerCase()
@@ -164,36 +345,9 @@ function padAddress(address) {
 }
 
 
-/* ---------- CONNECT ---------- */
-
-async function connectWallet() {
-
-  try {
-
-    if (!window.ethereum) {
-      alert("Open this page inside your wallet browser.");
-      return;
-    }
-
-    const accounts =
-      await window.ethereum.request({
-        method: "eth_requestAccounts"
-      });
-
-    account = accounts[0];
-
-    document.getElementById("wallet").innerHTML =
-      "Wallet:<br>" + account;
-
-  } catch (err) {
-
-    document.getElementById("wallet").innerHTML =
-      "Connection error:<br>" + err.message;
-  }
-}
-
-
-/* ---------- CONTRACT CHECKS ---------- */
+/* --------------------------
+   RUN ALL CHECKS
+--------------------------- */
 
 async function runChecks() {
 
@@ -203,59 +357,49 @@ async function runChecks() {
   try {
 
     if (!window.ethereum) {
+
       output.innerHTML =
-        "Open this page inside your wallet browser.";
+        "<span class='bad'>No wallet provider.</span>";
+
       return;
     }
 
-    output.innerHTML =
-      "Reading V3 contract...";
 
-    /*
-      Function selectors
+    const chain =
+      await window.ethereum.request({
+        method:"eth_chainId"
+      });
 
-      owner()
-      pair()
-      pairLocked()
-      BUY_TAX()
-      SELL_TAX()
-      swapThreshold()
-    */
 
-    const ownerRaw =
-      await ethCall("0x8da5cb5b");
+    if (
+      chain.toLowerCase() !==
+      TESTNET_CHAIN
+    ) {
 
-    const pairRaw =
-      await ethCall("0xa8aa1b31");
+      output.innerHTML =
+        "<span class='bad'>" +
+        "STOP — wallet is not on BSC Testnet." +
+        "</span><br><br>" +
+        "Tap Connect + Switch to BSC Testnet first.";
 
-    const pairLockedRaw =
-      await ethCall("0x0cdb5e3b");
-
-    /*
-      Solidity public constant selectors are calculated
-      here dynamically to avoid relying on guessed values.
-    */
-
-    async function selector(signature) {
-
-      const hex =
-        Array.from(
-          new TextEncoder().encode(signature)
-        )
-        .map(b =>
-          b.toString(16).padStart(2,"0")
-        )
-        .join("");
-
-      const hash =
-        await window.ethereum.request({
-          method: "web3_sha3",
-          params: ["0x" + hex]
-        });
-
-      return hash.slice(0,10);
+      return;
     }
 
+
+    output.innerHTML =
+      "Reading deployed V3 contract...";
+
+
+    /* CALCULATE ALL SELECTORS */
+
+    const ownerSelector =
+      await selector("owner()");
+
+    const pairSelector =
+      await selector("pair()");
+
+    const lockedSelector =
+      await selector("pairLocked()");
 
     const buySelector =
       await selector("BUY_TAX()");
@@ -269,72 +413,107 @@ async function runChecks() {
     const exemptSelector =
       await selector("isTaxExempt(address)");
 
+    const hiveSelector =
+      await selector("hiveAddress()");
 
-    const buyRaw =
-      await ethCall(buySelector);
+    const routerSelector =
+      await selector("router()");
 
-    const sellRaw =
-      await ethCall(sellSelector);
 
-    const thresholdRaw =
-      await ethCall(thresholdSelector);
-
+    /* READ CONTRACT */
 
     const owner =
-      decodeAddress(ownerRaw);
+      decodeAddress(
+        await callContract(ownerSelector)
+      );
 
     const pair =
-      decodeAddress(pairRaw);
+      decodeAddress(
+        await callContract(pairSelector)
+      );
 
     const pairLocked =
-      decodeBool(pairLockedRaw);
+      decodeBool(
+        await callContract(lockedSelector)
+      );
 
     const buyTax =
-      decodeUint(buyRaw);
+      decodeUint(
+        await callContract(buySelector)
+      );
 
     const sellTax =
-      decodeUint(sellRaw);
+      decodeUint(
+        await callContract(sellSelector)
+      );
 
     const threshold =
-      decodeUint(thresholdRaw);
+      decodeUint(
+        await callContract(thresholdSelector)
+      );
+
+    const hiveAddress =
+      decodeAddress(
+        await callContract(hiveSelector)
+      );
+
+    const router =
+      decodeAddress(
+        await callContract(routerSelector)
+      );
 
 
-    /* OWNER TAX EXEMPT CHECK */
+    /* OWNER EXEMPT */
 
-    let ownerExempt = "UNKNOWN";
+    let ownerExempt = null;
 
-    if (owner.startsWith("0x")) {
-
-      const data =
-        exemptSelector +
-        padAddress(owner);
+    if (owner) {
 
       ownerExempt =
         decodeBool(
-          await ethCall(data)
+          await callContract(
+            exemptSelector +
+            encodeAddress(owner)
+          )
         );
     }
 
 
-    /* CONNECTED WALLET TAX EXEMPT CHECK */
+    /* CONNECTED WALLET EXEMPT */
 
     let walletExempt =
-      "Connect wallet to check";
+      "Wallet not connected";
 
     if (account) {
 
-      const data =
-        exemptSelector +
-        padAddress(account);
-
       walletExempt =
         decodeBool(
-          await ethCall(data)
+          await callContract(
+            exemptSelector +
+            encodeAddress(account)
+          )
+        );
+    }
+
+
+    /* PAIR EXEMPT */
+
+    let pairExempt = null;
+
+    if (pair) {
+
+      pairExempt =
+        decodeBool(
+          await callContract(
+            exemptSelector +
+            encodeAddress(pair)
+          )
         );
     }
 
 
     const pairMatch =
+      pair &&
       pair.toLowerCase() ===
       EXPECTED_PAIR.toLowerCase();
 
@@ -342,20 +521,26 @@ async function runChecks() {
     output.innerHTML = `
 
       <b>V3 ON-CHAIN RESULTS</b>
+
       <br><br>
 
       <span class="label">Owner</span><br>
-      ${owner}
+      ${owner || "NO RETURN DATA"}
+
       <br><br>
 
       <span class="label">Stored Pair</span><br>
-      ${pair}
+      ${pair || "NO RETURN DATA"}
+
       <br>
 
-      <b class="${pairMatch ? "good":"bad"}">
-      Pair Match:
-      ${pairMatch ? "YES ✅":"NO ❌"}
-      </b>
+      ${
+        pairMatch
+
+        ? "<span class='good'>Pair Match: YES ✅</span>"
+
+        : "<span class='bad'>Pair Match: NO ❌</span>"
+      }
 
       <br><br>
 
@@ -366,31 +551,54 @@ async function runChecks() {
 
       <span class="label">BUY_TAX</span><br>
       ${buyTax}
-      ${buyTax === "250"
-        ? " (2.5%) ✅"
-        : " ❌"}
+
+      ${
+        buyTax === "250"
+        ? "<span class='good'> — 2.5% ✅</span>"
+        : "<span class='bad'> ❌</span>"
+      }
 
       <br><br>
 
       <span class="label">SELL_TAX</span><br>
       ${sellTax}
-      ${sellTax === "250"
-        ? " (2.5%) ✅"
-        : " ❌"}
+
+      ${
+        sellTax === "250"
+        ? "<span class='good'> — 2.5% ✅</span>"
+        : "<span class='bad'> ❌</span>"
+      }
 
       <br><br>
 
       <span class="label">Swap Threshold</span><br>
-      ${threshold}
+      ${threshold || "NO RETURN DATA"}
+
       <br>
-      Expected:
+
+      Expected:<br>
       100000000000000000000
       (100 HIVE)
 
       <br><br>
 
+      <span class="label">Hive Funding Address</span><br>
+      ${hiveAddress || "NO RETURN DATA"}
+
+      <br><br>
+
+      <span class="label">Router</span><br>
+      ${router || "NO RETURN DATA"}
+
+      <br><br>
+
       <span class="label">Owner Tax Exempt</span><br>
       ${ownerExempt}
+
+      <br><br>
+
+      <span class="label">Pair Tax Exempt</span><br>
+      ${pairExempt}
 
       <br><br>
 
@@ -402,11 +610,16 @@ async function runChecks() {
 
     `;
 
-  } catch (err) {
+
+  } catch(error) {
 
     output.innerHTML =
-      "<span class='bad'>Check failed:</span><br>" +
-      err.message;
+
+      "<span class='bad'>CHECK FAILED</span>" +
+
+      "<br><br>" +
+
+      error.message;
   }
 }
 
