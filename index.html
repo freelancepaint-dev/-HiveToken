@@ -91,7 +91,7 @@
 
     // PancakeSwap V2 Router - BSC Testnet
     const PANCAKE_ROUTER =
-      '0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
+      '0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3';
 
     // Temporary TESTNET Hive receiver
     const HIVE_RECEIVER =
@@ -189,18 +189,6 @@
       }
 
       try {
-
-        /*
-          HiveToken V2 constructor:
-
-          constructor(
-            address routerAddress,
-            address payable hiveFundingAddress
-          )
-
-          Solidity ABI encoding for each address
-          occupies 32 bytes.
-        */
 
         const routerArg =
           encodeAddress(PANCAKE_ROUTER);
