@@ -62,7 +62,8 @@
     #contract,
     #status,
     #liquidityStatus,
-    #buyStatus {
+    #buyStatus,
+    #pairStatus {
       word-break: break-all;
     }
   </style>
@@ -185,6 +186,22 @@
   </div>
 
   <div class="box">
+    <h2>Check Contract Pair</h2>
+
+    <p class="small">
+      Read-only check. No transaction and no gas.
+    </p>
+
+    <button id="checkPair">
+      Check Pair
+    </button>
+
+    <p id="pairStatus">
+      Pair not checked yet.
+    </p>
+  </div>
+
+  <div class="box">
     <h2>Status</h2>
 
     <p id="status">
@@ -211,6 +228,10 @@
     const HIVE_RECEIVER =
       '0x77Dc64A638100407F756393dF33640d5cDf45619';
 
+    // Pair actually used by the successful test buy
+    const EXPECTED_PAIR =
+      '0x1dc7772b91f3cb60989d8b11e4fca14cb4adb040';
+
     const walletText =
       document.getElementById('wallet');
 
@@ -225,6 +246,9 @@
 
     const buyStatus =
       document.getElementById('buyStatus');
+
+    const pairStatus =
+      document.getElementById('pairStatus');
 
     let account = null;
 
@@ -507,7 +531,8 @@
             params: [{
               from: account,
               to: PANCAKE_ROUTER,
-              value: '0x' + bnbWei.toString(16),
+              value:
+                '0x' + bnbWei.toString(16),
               data: data
             }]
           });
@@ -542,33 +567,8 @@
           );
         }
 
-        /*
-          swapExactETHForTokensSupportingFeeOnTransferTokens(
-            uint amountOutMin,
-            address[] path,
-            address to,
-            uint deadline
-          )
-
-          Function selector:
-          0xb6f9de95
-
-          Dynamic ABI layout:
-
-          word 1: amountOutMin = 0
-          word 2: offset to path = 0x80
-          word 3: recipient
-          word 4: deadline
-
-          path:
-          word 5: length = 2
-          word 6: WBNB
-          word 7: HIVE
-        */
-
         const selector = 'b6f9de95';
 
-        // PancakeSwap BSC Testnet WBNB
         const WBNB =
           '0xae13d989dac2f0debff460ac112a837c89baa7cd';
 
@@ -612,6 +612,66 @@
       }
     }
 
+    async function checkPair() {
+      if (!window.ethereum) {
+        pairStatus.textContent =
+          'Open this page inside your Web3 wallet browser.';
+        return;
+      }
+
+      try {
+        pairStatus.textContent =
+          'Reading pair from HiveToken...';
+
+        /*
+          pair()
+          Read-only eth_call.
+          No transaction and no gas.
+        */
+        const result =
+          await window.ethereum.request({
+            method: 'eth_call',
+            params: [{
+              to: HIVE_TOKEN,
+              data: '0xa8aa1b31'
+            }, 'latest']
+          });
+
+        if (
+          !result ||
+          result === '0x' ||
+          result.length < 42
+        ) {
+          throw new Error(
+            'Contract returned no pair address.'
+          );
+        }
+
+        const storedPair =
+          '0x' + result.slice(-40);
+
+        if (
+          storedPair.toLowerCase() ===
+          EXPECTED_PAIR.toLowerCase()
+        ) {
+          pairStatus.textContent =
+            'MATCH ✅ Stored pair: ' +
+            storedPair;
+        } else {
+          pairStatus.textContent =
+            'MISMATCH ❌ Stored pair: ' +
+            storedPair +
+            ' | Swap pair: ' +
+            EXPECTED_PAIR;
+        }
+
+      } catch (error) {
+        pairStatus.textContent =
+          error.message ||
+          'Pair check failed.';
+      }
+    }
+
     document
       .getElementById('connect')
       .addEventListener(
@@ -645,6 +705,13 @@
       .addEventListener(
         'click',
         testBuyHive
+      );
+
+    document
+      .getElementById('checkPair')
+      .addEventListener(
+        'click',
+        checkPair
       );
   </script>
 
