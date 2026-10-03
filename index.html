@@ -22,22 +22,21 @@ body {
   margin: 0 auto;
 }
 
-h1 {
-  font-size: 42px;
-  margin: 0 0 12px;
-}
+h1 { font-size: 42px; }
+h2 { font-size: 32px; }
 
-h2 {
-  font-size: 32px;
-  margin-top: 0;
+.warning,
+.important {
+  color: #ffd261;
+  font-weight: bold;
 }
 
 .warning {
-  color: #ffd261;
-  font-weight: bold;
   font-size: 22px;
   margin-bottom: 28px;
 }
+
+.important { font-size: 21px; }
 
 .card {
   border: 2px solid #555b55;
@@ -54,12 +53,10 @@ button {
   font-size: 24px;
   font-weight: bold;
   color: #0787f5;
-  background: #eeeeee;
+  background: #eee;
   margin: 12px 0;
   cursor: pointer;
 }
-
-button:active { opacity: 0.8; }
 
 .status {
   margin-top: 18px;
@@ -68,20 +65,12 @@ button:active { opacity: 0.8; }
   white-space: pre-wrap;
 }
 
-.important {
-  color: #ffd261;
-  font-size: 21px;
-  font-weight: bold;
-}
-
 .small {
   color: #c8c8c8;
   font-size: 18px;
 }
 
-.address {
-  overflow-wrap: anywhere;
-}
+.address { overflow-wrap: anywhere; }
 </style>
 </head>
 
@@ -89,140 +78,86 @@ button:active { opacity: 0.8; }
 <div class="wrap">
 
 <h1>🐝 HiveToken V3</h1>
-
-<div class="warning">
-BNB SMART CHAIN TESTNET ONLY
-</div>
+<div class="warning">BNB SMART CHAIN TESTNET ONLY</div>
 
 <div class="card">
 <h2>1. Wallet</h2>
-
 <button onclick="connectWallet()">Connect Wallet</button>
-
-<div id="walletStatus" class="status">
-Wallet not connected.
+<div id="walletStatus" class="status">Wallet not connected.</div>
 </div>
-</div>
-
 
 <div class="card">
 <h2>2. HiveToken V3</h2>
-
-<p class="small">
-V3 is already deployed. Do not deploy it again.
-</p>
-
-<div class="status">
-<strong>V3 Contract:</strong><br>
-<span class="address">
+<p class="small">V3 is already deployed.</p>
+<div class="status address">
 0xf10f0091a7504761e5e0cab7a7de34df077871f8
-</span>
 </div>
 </div>
-
 
 <div class="card">
-<h2>3. Verified HIVE/WBNB Pair</h2>
-
-<p class="small">
-This pair was verified using token0 and token1 on BSC Testnet.
-</p>
-
-<div class="status">
-<strong>Verified Pair:</strong><br>
-<span class="address">
+<h2>3. Verified Pair</h2>
+<div class="status address">
 0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6
-</span>
 </div>
 </div>
-
 
 <div class="card">
-<h2>4. Pair Lock</h2>
+<h2>4. Pair Setup</h2>
+<p class="important">Pair setup completed and verified. ✅</p>
+</div>
 
+<div class="card">
+<h2>5. Test Liquidity</h2>
 <p class="important">
-Pair setup completed.
+10,000 HIVE + 0.01 tBNB liquidity submitted. ✅
 </p>
-
-<p class="small">
-Do not attempt to set another pair.
-</p>
+<p class="small">Do not add liquidity again.</p>
 </div>
-
 
 <div class="card">
-<h2>5. Verify Stored Pair</h2>
+<h2>6. Test Buy</h2>
 
-<p class="small">
-Read-only. No transaction and no gas.
-</p>
-
-<button onclick="checkStoredPair()">
-Check Stored Pair
-</button>
-
-<div id="storedPairStatus" class="status">
-Not checked yet.
-</div>
-</div>
-
-
-<div class="card">
-<h2>6. HIVE Approval</h2>
-
-<p class="important">
-10,000 HIVE approval was already submitted.
-</p>
-
-<p class="small">
-Do not approve again unless the previous approval failed.
-</p>
-</div>
-
-
-<div class="card">
-<h2>7. Add Test Liquidity</h2>
-
-<p class="small">
-Adds exactly:
+<p>
+Buy HIVE using exactly:
 </p>
 
 <div class="status">
-<strong>10,000 HIVE</strong><br>
-+<br>
-<strong>0.01 tBNB</strong>
+<strong>0.001 tBNB</strong>
 </div>
 
 <p class="important">
-TESTNET ONLY. LP tokens will be sent to the connected wallet.
+Use a non-owner test wallet so we can test the 2.5% buy tax.
 </p>
 
-<button onclick="addLiquidity()">
-Add 10,000 HIVE + 0.01 tBNB
+<p class="small">
+This uses PancakeSwap's fee-on-transfer compatible swap function.
+</p>
+
+<button onclick="buyHive()">
+Buy HIVE — 0.001 tBNB
 </button>
 
-<div id="liquidityStatus" class="status">
-Liquidity not submitted.
+<div id="buyStatus" class="status">
+Test buy not submitted.
 </div>
 </div>
 
 </div>
-
 
 <script>
+
 const TESTNET_CHAIN_ID = '0x61';
 
 const HIVE_TOKEN =
 '0xf10f0091a7504761e5e0cab7a7de34df077871f8';
 
-const VERIFIED_PAIR =
-'0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6';
+const WBNB =
+'0xae13d989dac2f0debff460ac112a837c89baa7cd';
 
 const PANCAKE_ROUTER =
 '0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
 
 let account = null;
-
 
 function padAddress(address) {
   return address
@@ -231,27 +166,28 @@ function padAddress(address) {
     .padStart(64, '0');
 }
 
-
 function padUint(value) {
   return BigInt(value)
     .toString(16)
     .padStart(64, '0');
 }
 
-
 async function connectWallet() {
+
   const status =
     document.getElementById('walletStatus');
 
   try {
+
     if (!window.ethereum) {
       status.innerText = 'No wallet detected.';
       return;
     }
 
-    const chainId = await ethereum.request({
-      method: 'eth_chainId'
-    });
+    const chainId =
+      await ethereum.request({
+        method: 'eth_chainId'
+      });
 
     if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
       status.innerText =
@@ -259,81 +195,41 @@ async function connectWallet() {
       return;
     }
 
-    const accounts = await ethereum.request({
-      method: 'eth_requestAccounts'
-    });
-
-    if (!accounts || !accounts.length) {
-      status.innerText =
-        'No wallet account connected.';
-      return;
-    }
+    const accounts =
+      await ethereum.request({
+        method: 'eth_requestAccounts'
+      });
 
     account = accounts[0];
 
     status.innerText =
-      account + '\n\nWallet connected on BNB Testnet.';
+      account +
+      '\n\nConnected on BNB Testnet.';
 
   } catch (err) {
+
     status.innerText =
-      'Wallet connection error: ' +
+      'Connection error: ' +
       (err.message || err);
   }
 }
 
+async function buyHive() {
 
-async function checkStoredPair() {
   const status =
-    document.getElementById('storedPairStatus');
-
-  try {
-    const result = await ethereum.request({
-      method: 'eth_call',
-      params: [{
-        to: HIVE_TOKEN,
-        data: '0xa8aa1b31'
-      }, 'latest']
-    });
-
-    const storedPair =
-      '0x' + result.slice(-40);
-
-    if (
-      storedPair.toLowerCase() ===
-      VERIFIED_PAIR.toLowerCase()
-    ) {
-      status.innerText =
-        'MATCH ✅\n\nStored pair:\n' +
-        storedPair;
-    } else {
-      status.innerText =
-        'MISMATCH ❌\n\nStored pair:\n' +
-        storedPair;
-    }
-
-  } catch (err) {
-    status.innerText =
-      'Read error: ' +
-      (err.message || err);
-  }
-}
-
-
-async function addLiquidity() {
-  const status =
-    document.getElementById('liquidityStatus');
+    document.getElementById('buyStatus');
 
   try {
 
     if (!window.ethereum) {
-      status.innerText =
-        'No wallet detected.';
+      status.innerText = 'No wallet detected.';
       return;
     }
 
-    const chainId = await ethereum.request({
-      method: 'eth_chainId'
-    });
+    const chainId =
+      await ethereum.request({
+        method: 'eth_chainId'
+      });
 
     if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
       status.innerText =
@@ -341,117 +237,134 @@ async function addLiquidity() {
       return;
     }
 
-    if (!account) {
-      const accounts = await ethereum.request({
+    const accounts =
+      await ethereum.request({
         method: 'eth_requestAccounts'
       });
 
-      if (!accounts || !accounts.length) {
-        status.innerText =
-          'Connect the HIVE holder wallet first.';
-        return;
-      }
-
-      account = accounts[0];
+    if (!accounts || !accounts.length) {
+      status.innerText =
+        'Connect a test wallet first.';
+      return;
     }
 
+    account = accounts[0];
+
     /*
-      PancakeSwap V2:
-      addLiquidityETH(
-        address token,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
+      swapExactETHForTokensSupportingFeeOnTransferTokens(
+        uint amountOutMin,
+        address[] path,
         address to,
         uint deadline
       )
 
-      Selector:
-      0xf305d719
+      selector:
+      0xb6f9de95
     */
 
-    const selector = '0xf305d719';
-
-    const amountTokenDesired =
-      10000n * (10n ** 18n);
+    const selector = '0xb6f9de95';
 
     /*
-      Test liquidity setup is new/empty,
-      so these minimums are set to zero.
-      Do not reuse this approach for mainnet.
+      ABI layout:
+
+      amountOutMin = 0
+      path offset = 128 bytes
+      to = connected wallet
+      deadline = current time + 20 minutes
+
+      dynamic path:
+      length = 2
+      WBNB
+      HIVE
     */
-    const amountTokenMin = 0n;
-    const amountETHMin = 0n;
+
+    const amountOutMin = 0n;
+
+    const pathOffset = 128n;
 
     const deadline =
       BigInt(Math.floor(Date.now() / 1000) + 1200);
 
     const data =
       selector +
-      padAddress(HIVE_TOKEN) +
-      padUint(amountTokenDesired) +
-      padUint(amountTokenMin) +
-      padUint(amountETHMin) +
+      padUint(amountOutMin) +
+      padUint(pathOffset) +
       padAddress(account) +
-      padUint(deadline);
+      padUint(deadline) +
+      padUint(2n) +
+      padAddress(WBNB) +
+      padAddress(HIVE_TOKEN);
 
     /*
-      0.01 BNB = 10^16 wei
+      0.001 tBNB
+      = 1,000,000,000,000,000 wei
     */
+
     const value =
-      '0x2386f26fc10000';
+      '0x38d7ea4c68000';
 
     status.innerText =
       'Waiting for wallet confirmation...';
 
-    const txHash = await ethereum.request({
-      method: 'eth_sendTransaction',
-      params: [{
-        from: account,
-        to: PANCAKE_ROUTER,
-        value: value,
-        data: data
-      }]
-    });
+    const txHash =
+      await ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: account,
+          to: PANCAKE_ROUTER,
+          value: value,
+          data: data
+        }]
+      });
 
     status.innerText =
-      'Liquidity transaction submitted:\n' +
+      'Test buy submitted:\n' +
       txHash +
-      '\n\nDo not submit another liquidity transaction.';
+      '\n\nDo not submit another buy yet.';
 
   } catch (err) {
+
     status.innerText =
-      'Liquidity error: ' +
+      'Buy error: ' +
       (err.message || err);
   }
 }
 
-
 async function loadExistingWallet() {
+
   try {
 
     if (!window.ethereum) return;
 
-    const chainId = await ethereum.request({
-      method: 'eth_chainId'
-    });
+    const chainId =
+      await ethereum.request({
+        method: 'eth_chainId'
+      });
 
     if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
-      document.getElementById('walletStatus').innerText =
+
+      document.getElementById(
+        'walletStatus'
+      ).innerText =
         'Switch wallet to BNB Smart Chain Testnet.';
+
       return;
     }
 
-    const accounts = await ethereum.request({
-      method: 'eth_accounts'
-    });
+    const accounts =
+      await ethereum.request({
+        method: 'eth_accounts'
+      });
 
     if (accounts && accounts.length) {
+
       account = accounts[0];
 
-      document.getElementById('walletStatus').innerText =
+      document.getElementById(
+        'walletStatus'
+      ).innerText =
         account +
-        '\n\nWallet connected on BNB Testnet.';
+        '\n\nConnected on BNB Testnet.';
     }
 
   } catch (err) {
@@ -459,9 +372,8 @@ async function loadExistingWallet() {
   }
 }
 
-
 loadExistingWallet();
-</script>
 
+</script>
 </body>
 </html>
