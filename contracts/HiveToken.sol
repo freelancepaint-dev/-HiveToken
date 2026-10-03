@@ -12,6 +12,12 @@ pragma solidity ^0.8.20;
     Tax flow:
     HIVE tax -> contract -> swap to BNB -> Hive funding address
 
+    Pair setup:
+    1. Deploy token
+    2. Create/find HIVE/WBNB pair
+    3. Owner calls setPair(pairAddress) ONCE
+    4. Pair can never be changed again
+
     TESTNET FIRST.
 */
 
@@ -51,7 +57,8 @@ contract HiveToken {
 
     IPancakeRouter public immutable router;
 
-    address public immutable pair;
+    address public pair;
+    bool public pairLocked;
 
     mapping(address => uint256) public balanceOf;
 
@@ -62,7 +69,7 @@ contract HiveToken {
 
     bool private swapping;
 
-    uint256 public swapThreshold =
+    uint256 public constant swapThreshold =
         100 * 10**18;
 
     event Transfer(
@@ -77,6 +84,10 @@ contract HiveToken {
         uint256 value
     );
 
+    event PairConfigured(
+        address indexed pair
+    );
+
     event TaxCollected(
         address indexed from,
         uint256 amount
@@ -87,20 +98,22 @@ contract HiveToken {
         uint256 bnbSent
     );
 
+    modifier onlyOwner() {
+        require(
+            msg.sender == owner,
+            "Not owner"
+        );
+        _;
+    }
+
     constructor(
         address routerAddress,
-        address pairAddress,
         address payable hiveFundingAddress
     ) {
 
         require(
             routerAddress != address(0),
             "Zero router"
-        );
-
-        require(
-            pairAddress != address(0),
-            "Zero pair"
         );
 
         require(
@@ -113,14 +126,10 @@ contract HiveToken {
         router =
             IPancakeRouter(routerAddress);
 
-        pair =
-            pairAddress;
-
         hiveAddress =
             hiveFundingAddress;
 
         isTaxExempt[msg.sender] = true;
-
         isTaxExempt[address(this)] = true;
 
         balanceOf[msg.sender] =
@@ -134,6 +143,34 @@ contract HiveToken {
     }
 
     receive() external payable {}
+
+    /*
+        ONE-TIME PAIR CONFIGURATION
+
+        Once set successfully, pairLocked becomes true
+        and the pair can never be changed again.
+    */
+    function setPair(
+        address pairAddress
+    ) external onlyOwner {
+
+        require(
+            !pairLocked,
+            "Pair already locked"
+        );
+
+        require(
+            pairAddress != address(0),
+            "Zero pair"
+        );
+
+        pair = pairAddress;
+        pairLocked = true;
+
+        emit PairConfigured(
+            pairAddress
+        );
+    }
 
     function transfer(
         address to,
@@ -181,8 +218,7 @@ contract HiveToken {
         );
 
         if (
-            allowed !=
-            type(uint256).max
+            allowed != type(uint256).max
         ) {
 
             allowance[from][msg.sender] =
@@ -226,13 +262,11 @@ contract HiveToken {
         );
 
         /*
-            On a sell, accumulated HIVE tax
-            can be converted to BNB.
-
-            This check occurs BEFORE the
-            current sell's tax is collected.
+            Convert accumulated tax on a subsequent sell
+            once at least 100 HIVE is already accumulated.
         */
         if (
+            pairLocked &&
             to == pair &&
             !swapping &&
             balanceOf[address(this)] >=
@@ -244,6 +278,7 @@ contract HiveToken {
         uint256 taxAmount = 0;
 
         if (
+            pairLocked &&
             !swapping &&
             !isTaxExempt[from] &&
             !isTaxExempt[to]
