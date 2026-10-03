@@ -6,590 +6,448 @@
   <title>HiveToken V3 Testnet</title>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #11150f;
+      margin: 0;
+      padding: 24px;
+      background: #0b100b;
       color: #f5f1df;
-      max-width: 650px;
-      margin: auto;
-      padding: 25px;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
     }
 
-    .box {
-      border: 1px solid #555;
-      border-radius: 18px;
-      padding: 22px;
-      margin-top: 20px;
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
     }
 
-    button {
-      font-size: 18px;
-      font-weight: bold;
-      padding: 15px 20px;
-      margin: 8px 0;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
+    h1 {
+      font-size: 42px;
+      margin: 0 0 12px;
+    }
+
+    h2 {
+      font-size: 32px;
+      margin-top: 0;
     }
 
     .warning {
-      color: #ffd166;
+      color: #ffd261;
+      font-weight: bold;
+      font-size: 22px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      border: 2px solid #555b55;
+      border-radius: 28px;
+      padding: 28px;
+      margin: 22px 0;
+      background: #0e140e;
+    }
+
+    button {
+      border: 0;
+      border-radius: 22px;
+      padding: 20px 28px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #0787f5;
+      background: #eeeeee;
+      margin: 12px 0;
+      cursor: pointer;
+    }
+
+    button:active {
+      opacity: 0.8;
+    }
+
+    .status {
+      margin-top: 18px;
+      font-size: 20px;
+      overflow-wrap: anywhere;
+    }
+
+    .important {
+      color: #ffd261;
+      font-size: 21px;
       font-weight: bold;
     }
 
     .small {
-      font-size: 14px;
-      color: #c9c9c9;
+      color: #c8c8c8;
+      font-size: 18px;
     }
 
-    #wallet,
-    #status,
-    #contract,
-    #pairStatus {
-      word-break: break-all;
+    .address {
+      overflow-wrap: anywhere;
     }
   </style>
 </head>
 
 <body>
+<div class="wrap">
 
   <h1>🐝 HiveToken V3</h1>
 
-  <p class="warning">
+  <div class="warning">
     BNB SMART CHAIN TESTNET ONLY
-  </p>
+  </div>
 
-  <div class="box">
+  <div class="card">
     <h2>1. Wallet</h2>
 
-    <button id="connect">
+    <button onclick="connectWallet()">
       Connect Wallet
     </button>
 
-    <p id="wallet">
-      Not connected
-    </p>
+    <div id="walletStatus" class="status">
+      Wallet not connected.
+    </div>
   </div>
 
-  <div class="box">
-    <h2>2. Deploy HiveToken V3</h2>
+
+  <div class="card">
+    <h2>2. HiveToken V3</h2>
 
     <p class="small">
-      Deploys the new V3 token using the PancakeSwap
-      V2 testnet router and temporary testnet Hive receiver.
+      The V3 token is already deployed. Do not deploy it again.
     </p>
 
-    <button id="deploy">
-      Deploy HiveToken V3
-    </button>
-
-    <p id="contract">
-      V3 not deployed yet.
-    </p>
+    <div class="status">
+      <strong>V3 Contract:</strong><br>
+      <span class="address">
+        0xf10f0091a7504761e5e0cab7a7de34df077871f8
+      </span>
+    </div>
   </div>
 
-  <div class="box">
-    <h2>3. Create / Find Pair</h2>
+
+  <div class="card">
+    <h2>3. Verified HIVE/WBNB Pair</h2>
 
     <p class="small">
-      Creates the HIVE/WBNB pair for THIS V3 token,
-      or reads the existing pair if one already exists.
+      This pair has already been created and its token0/token1
+      addresses were checked on BSC Testnet.
     </p>
 
-    <button id="createPair">
-      Create / Find V3 Pair
-    </button>
+    <div class="status">
+      <strong>Verified Pair:</strong><br>
+      <span class="address">
+        0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6
+      </span>
+    </div>
 
-    <p id="pairStatus">
-      Deploy V3 first.
-    </p>
+    <div class="status">
+      <strong>WBNB:</strong><br>
+      <span class="address">
+        0xae13d989dac2f0debff460ac112a837c89baa7cd
+      </span>
+    </div>
   </div>
 
-  <div class="box">
+
+  <div class="card">
     <h2>4. Lock Pair Into HiveToken</h2>
 
-    <p class="warning">
+    <p class="important">
       IMPORTANT: This can only be done once.
     </p>
 
     <p class="small">
-      Do not press this button until the pair address
-      shown above has been checked.
+      This sets the verified HIVE/WBNB pair in the V3 HiveToken contract.
     </p>
 
-    <button id="setPair">
+    <button onclick="setPair()">
       Set & Lock Pair
     </button>
+
+    <div id="setPairStatus" class="status">
+      Pair has not been locked from this page yet.
+    </div>
   </div>
 
-  <div class="box">
+
+  <div class="card">
     <h2>5. Verify Stored Pair</h2>
 
     <p class="small">
       Read-only. No transaction and no gas.
     </p>
 
-    <button id="checkPair">
+    <button onclick="checkStoredPair()">
       Check Stored Pair
     </button>
 
-    <p id="status">
-      Connect your wallet first.
-    </p>
+    <div id="storedPairStatus" class="status">
+      Not checked yet.
+    </div>
   </div>
 
-  <script src="./hive-bytecode.js"></script>
+</div>
 
-  <script>
-    const TESTNET_CHAIN_ID = '0x61';
 
-    const PANCAKE_ROUTER =
-      '0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
+<script>
+const TESTNET_CHAIN_ID = '0x61';
 
-    const PANCAKE_FACTORY =
-      '0x6725F303b657a9451d8BA641348b6761A6CC7a17';
+const HIVE_TOKEN =
+  '0xf10f0091a7504761e5e0cab7a7de34df077871f8';
 
-    const WBNB =
-      '0xae13d989dac2f0debff460ac112a837c89baa7cd';
+const VERIFIED_PAIR =
+  '0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6';
 
-    const HIVE_RECEIVER =
-      '0x77Dc64A638100407F756393dF33640d5cDf45619';
+const WBNB =
+  '0xae13d989dac2f0debff460ac112a837c89baa7cd';
 
-    const walletText =
-      document.getElementById('wallet');
+let account = null;
 
-    const statusText =
-      document.getElementById('status');
+/* Keep these populated even after page refresh */
+let hiveToken = HIVE_TOKEN;
+let discoveredPair = VERIFIED_PAIR;
 
-    const contractText =
-      document.getElementById('contract');
 
-    const pairStatus =
-      document.getElementById('pairStatus');
+function padAddress(address) {
+  return address
+    .toLowerCase()
+    .replace(/^0x/, '')
+    .padStart(64, '0');
+}
 
-    let account = null;
-    let hiveToken = null;
-    let discoveredPair = null;
 
-    function encodeAddress(address) {
-      return address
-        .toLowerCase()
-        .replace(/^0x/, '')
-        .padStart(64, '0');
+async function connectWallet() {
+  const status = document.getElementById('walletStatus');
+
+  try {
+    if (!window.ethereum) {
+      status.innerText =
+        'No injected wallet was detected.';
+      return;
     }
 
-    async function waitForReceipt(txHash) {
-      let receipt = null;
+    const chainId = await ethereum.request({
+      method: 'eth_chainId'
+    });
 
-      while (!receipt) {
-        await new Promise(
-          resolve => setTimeout(resolve, 3000)
-        );
-
-        receipt =
-          await window.ethereum.request({
-            method: 'eth_getTransactionReceipt',
-            params: [txHash]
-          });
-      }
-
-      return receipt;
+    if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
+      status.innerText =
+        'Wrong network. Switch wallet to BNB Smart Chain Testnet.';
+      return;
     }
 
-    async function connectWallet() {
-      if (!window.ethereum) {
-        statusText.textContent =
-          'Open this page inside your Web3 wallet browser.';
+    const accounts = await ethereum.request({
+      method: 'eth_requestAccounts'
+    });
+
+    if (!accounts || !accounts.length) {
+      status.innerText =
+        'No wallet account connected.';
+      return;
+    }
+
+    account = accounts[0];
+
+    status.innerText =
+      account + '\n\nWallet connected on BNB Testnet.';
+
+  } catch (err) {
+    status.innerText =
+      'Wallet connection error: ' +
+      (err.message || err);
+  }
+}
+
+
+async function getSetPairSelector() {
+  const result = await ethereum.request({
+    method: 'web3_sha3',
+    params: [
+      '0x' +
+      Array.from(
+        new TextEncoder().encode('setPair(address)')
+      )
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+    ]
+  });
+
+  return result.slice(0, 10);
+}
+
+
+async function setPair() {
+  const status =
+    document.getElementById('setPairStatus');
+
+  try {
+    if (!window.ethereum) {
+      status.innerText =
+        'No wallet detected.';
+      return;
+    }
+
+    const chainId = await ethereum.request({
+      method: 'eth_chainId'
+    });
+
+    if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
+      status.innerText =
+        'STOP: Wallet is not on BNB Smart Chain Testnet.';
+      return;
+    }
+
+    if (!account) {
+      const accounts = await ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      if (!accounts || !accounts.length) {
+        status.innerText =
+          'Connect the deployment wallet first.';
         return;
       }
 
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{
-            chainId: TESTNET_CHAIN_ID
-          }]
-        });
-
-        const accounts =
-          await window.ethereum.request({
-            method: 'eth_requestAccounts'
-          });
-
-        account = accounts[0];
-
-        walletText.textContent =
-          account;
-
-        statusText.textContent =
-          'Wallet connected on BNB Testnet.';
-
-      } catch (error) {
-        statusText.textContent =
-          error.message ||
-          'Wallet connection failed.';
-      }
+      account = accounts[0];
     }
 
-    async function deployToken() {
-      if (!account) {
-        statusText.textContent =
-          'Connect your wallet first.';
-        return;
-      }
+    const selector =
+      await getSetPairSelector();
 
-      if (!window.HIVE_BYTECODE) {
-        statusText.textContent =
-          'Deployment bytecode not found.';
-        return;
-      }
+    const data =
+      selector +
+      padAddress(VERIFIED_PAIR);
 
-      try {
-        const deploymentData =
-          window.HIVE_BYTECODE +
-          encodeAddress(PANCAKE_ROUTER) +
-          encodeAddress(HIVE_RECEIVER);
+    status.innerText =
+      'Waiting for wallet confirmation...';
 
-        statusText.textContent =
-          'Confirm V3 TESTNET deployment in your wallet...';
+    const txHash = await ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: account,
+        to: HIVE_TOKEN,
+        value: '0x0',
+        data: data
+      }]
+    });
 
-        const txHash =
-          await window.ethereum.request({
-            method: 'eth_sendTransaction',
-            params: [{
-              from: account,
-              data: deploymentData
-            }]
-          });
+    status.innerText =
+      'Pair lock transaction submitted:\n' +
+      txHash +
+      '\n\nWait for confirmation, then use Check Stored Pair.';
 
-        statusText.textContent =
-          'Deployment submitted. Waiting...';
+  } catch (err) {
+    status.innerText =
+      'Set pair error: ' +
+      (err.message || err);
+  }
+}
 
-        const receipt =
-          await waitForReceipt(txHash);
 
-        if (receipt.status !== '0x1') {
-          throw new Error(
-            'Deployment transaction failed.'
-          );
-        }
+async function checkStoredPair() {
+  const status =
+    document.getElementById('storedPairStatus');
 
-        hiveToken =
-          receipt.contractAddress;
-
-        contractText.textContent =
-          'V3 Contract: ' + hiveToken;
-
-        pairStatus.textContent =
-          'V3 deployed. Pair not created yet.';
-
-        statusText.textContent =
-          'V3 deployment successful. STOP here and verify the contract address before creating the pair.';
-
-      } catch (error) {
-        statusText.textContent =
-          error.message ||
-          'Deployment failed.';
-      }
+  try {
+    if (!window.ethereum) {
+      status.innerText =
+        'No wallet detected.';
+      return;
     }
 
-    async function readFactoryPair() {
-      if (!hiveToken) {
-        throw new Error(
-          'Deploy V3 first.'
-        );
-      }
+    const chainId = await ethereum.request({
+      method: 'eth_chainId'
+    });
 
-      /*
-        getPair(address,address)
-        selector = 0xe6a43905
-      */
-
-      const data =
-        '0xe6a43905' +
-        encodeAddress(hiveToken) +
-        encodeAddress(WBNB);
-
-      const result =
-        await window.ethereum.request({
-          method: 'eth_call',
-          params: [{
-            to: PANCAKE_FACTORY,
-            data: data
-          }, 'latest']
-        });
-
-      if (!result || result === '0x') {
-        throw new Error(
-          'Factory pair lookup failed.'
-        );
-      }
-
-      return '0x' + result.slice(-40);
+    if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
+      status.innerText =
+        'Switch to BNB Smart Chain Testnet.';
+      return;
     }
 
-    async function createOrFindPair() {
-      if (!account || !hiveToken) {
-        pairStatus.textContent =
-          'Connect wallet and deploy V3 first.';
-        return;
-      }
+    /*
+      pair()
+      selector = 0xa8aa1b31
+    */
 
-      try {
-        pairStatus.textContent =
-          'Checking factory for existing pair...';
+    const result = await ethereum.request({
+      method: 'eth_call',
+      params: [{
+        to: HIVE_TOKEN,
+        data: '0xa8aa1b31'
+      }, 'latest']
+    });
 
-        let pair =
-          await readFactoryPair();
-
-        const ZERO =
-          '0x0000000000000000000000000000000000000000';
-
-        if (
-          pair.toLowerCase() !==
-          ZERO.toLowerCase()
-        ) {
-          discoveredPair = pair;
-
-          pairStatus.textContent =
-            'Existing V3 pair: ' +
-            discoveredPair;
-
-          return;
-        }
-
-        /*
-          createPair(address,address)
-          selector = 0xc9c65396
-        */
-
-        const data =
-          '0xc9c65396' +
-          encodeAddress(hiveToken) +
-          encodeAddress(WBNB);
-
-        pairStatus.textContent =
-          'Confirm pair creation in your wallet...';
-
-        const txHash =
-          await window.ethereum.request({
-            method: 'eth_sendTransaction',
-            params: [{
-              from: account,
-              to: PANCAKE_FACTORY,
-              data: data
-            }]
-          });
-
-        const receipt =
-          await waitForReceipt(txHash);
-
-        if (receipt.status !== '0x1') {
-          throw new Error(
-            'Pair creation failed.'
-          );
-        }
-
-        pair =
-          await readFactoryPair();
-
-        if (
-          pair.toLowerCase() ===
-          ZERO.toLowerCase()
-        ) {
-          throw new Error(
-            'Factory still reports zero pair.'
-          );
-        }
-
-        discoveredPair =
-          pair;
-
-        pairStatus.textContent =
-          'V3 pair created: ' +
-          discoveredPair +
-          ' — STOP and verify this address before locking it.';
-
-      } catch (error) {
-        pairStatus.textContent =
-          error.message ||
-          'Pair setup failed.';
-      }
+    if (!result || result === '0x') {
+      status.innerText =
+        'Could not read pair().';
+      return;
     }
 
-    async function setPair() {
-      if (
-        !account ||
-        !hiveToken ||
-        !discoveredPair
-      ) {
-        statusText.textContent =
-          'Deploy V3 and create/find its pair first.';
-        return;
-      }
+    const storedPair =
+      '0x' + result.slice(-40);
 
-      try {
-        /*
-          setPair(address)
-
-          We derive the selector at runtime instead
-          of hard-coding an unverified selector.
-        */
-
-        const selectorHash =
-          await window.ethereum.request({
-            method: 'web3_sha3',
-            params: [
-              '0x' +
-              Array.from(
-                new TextEncoder()
-                  .encode('setPair(address)')
-              )
-              .map(
-                b =>
-                  b.toString(16)
-                    .padStart(2, '0')
-              )
-              .join('')
-            ]
-          });
-
-        const selector =
-          selectorHash.slice(2, 10);
-
-        const data =
-          '0x' +
-          selector +
-          encodeAddress(discoveredPair);
-
-        statusText.textContent =
-          'Confirm ONE-TIME pair lock in your wallet...';
-
-        const txHash =
-          await window.ethereum.request({
-            method: 'eth_sendTransaction',
-            params: [{
-              from: account,
-              to: hiveToken,
-              data: data
-            }]
-          });
-
-        const receipt =
-          await waitForReceipt(txHash);
-
-        if (receipt.status !== '0x1') {
-          throw new Error(
-            'Pair lock transaction failed.'
-          );
-        }
-
-        statusText.textContent =
-          'Pair lock succeeded. Now use Check Stored Pair.';
-
-      } catch (error) {
-        statusText.textContent =
-          error.message ||
-          'Pair lock failed.';
-      }
+    if (
+      storedPair.toLowerCase() ===
+      VERIFIED_PAIR.toLowerCase()
+    ) {
+      status.innerText =
+        'MATCH ✅\n\nStored pair:\n' +
+        storedPair +
+        '\n\nVerified pair:\n' +
+        VERIFIED_PAIR;
+    } else {
+      status.innerText =
+        'MISMATCH ❌\n\nStored pair:\n' +
+        storedPair +
+        '\n\nExpected pair:\n' +
+        VERIFIED_PAIR;
     }
 
-    async function checkPair() {
-      if (!hiveToken) {
-        statusText.textContent =
-          'Deploy V3 first.';
-        return;
-      }
+  } catch (err) {
+    status.innerText =
+      'Read error: ' +
+      (err.message || err);
+  }
+}
 
-      try {
-        /*
-          pair()
-          selector = 0xa8aa1b31
-        */
 
-        const result =
-          await window.ethereum.request({
-            method: 'eth_call',
-            params: [{
-              to: hiveToken,
-              data: '0xa8aa1b31'
-            }, 'latest']
-          });
+/* Automatically show wallet if permission already exists */
+async function loadExistingWallet() {
+  try {
+    if (!window.ethereum) return;
 
-        if (
-          !result ||
-          result === '0x'
-        ) {
-          throw new Error(
-            'No pair result returned.'
-          );
-        }
+    const chainId = await ethereum.request({
+      method: 'eth_chainId'
+    });
 
-        const storedPair =
-          '0x' + result.slice(-40);
-
-        if (
-          discoveredPair &&
-          storedPair.toLowerCase() ===
-          discoveredPair.toLowerCase()
-        ) {
-          statusText.textContent =
-            'MATCH ✅ Stored pair: ' +
-            storedPair;
-        } else {
-          statusText.textContent =
-            'Stored pair: ' +
-            storedPair +
-            (
-              discoveredPair
-                ? ' | Expected: ' +
-                  discoveredPair
-                : ''
-            );
-        }
-
-      } catch (error) {
-        statusText.textContent =
-          error.message ||
-          'Pair check failed.';
-      }
+    if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
+      document.getElementById('walletStatus').innerText =
+        'Switch wallet to BNB Smart Chain Testnet.';
+      return;
     }
 
-    document
-      .getElementById('connect')
-      .addEventListener(
-        'click',
-        connectWallet
-      );
+    const accounts = await ethereum.request({
+      method: 'eth_accounts'
+    });
 
-    document
-      .getElementById('deploy')
-      .addEventListener(
-        'click',
-        deployToken
-      );
+    if (accounts && accounts.length) {
+      account = accounts[0];
 
-    document
-      .getElementById('createPair')
-      .addEventListener(
-        'click',
-        createOrFindPair
-      );
+      document.getElementById('walletStatus').innerText =
+        account +
+        '\n\nWallet connected on BNB Testnet.';
+    }
 
-    document
-      .getElementById('setPair')
-      .addEventListener(
-        'click',
-        setPair
-      );
+  } catch (err) {
+    console.log(err);
+  }
+}
 
-    document
-      .getElementById('checkPair')
-      .addEventListener(
-        'click',
-        checkPair
-      );
-  </script>
+
+loadExistingWallet();
+</script>
 
 </body>
 </html>
