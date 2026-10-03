@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HiveToken V2 Testnet</title>
+  <title>HiveToken V3 Testnet</title>
 
   <style>
     body {
@@ -32,22 +32,6 @@
       cursor: pointer;
     }
 
-    input {
-      width: 100%;
-      box-sizing: border-box;
-      font-size: 18px;
-      padding: 14px;
-      margin: 6px 0 14px 0;
-      border-radius: 10px;
-      border: 1px solid #777;
-    }
-
-    label {
-      display: block;
-      margin-top: 8px;
-      font-weight: bold;
-    }
-
     .warning {
       color: #ffd166;
       font-weight: bold;
@@ -59,10 +43,8 @@
     }
 
     #wallet,
-    #contract,
     #status,
-    #liquidityStatus,
-    #buyStatus,
+    #contract,
     #pairStatus {
       word-break: break-all;
     }
@@ -71,144 +53,89 @@
 
 <body>
 
-  <h1>🐝 HiveToken V2</h1>
+  <h1>🐝 HiveToken V3</h1>
 
   <p class="warning">
     BNB SMART CHAIN TESTNET ONLY
   </p>
 
   <div class="box">
-    <h2>Wallet</h2>
+    <h2>1. Wallet</h2>
 
-    <button id="connect">Connect Wallet</button>
+    <button id="connect">
+      Connect Wallet
+    </button>
 
-    <p id="wallet">Not connected</p>
+    <p id="wallet">
+      Not connected
+    </p>
   </div>
 
   <div class="box">
-    <h2>HiveToken Tax Test</h2>
+    <h2>2. Deploy HiveToken V3</h2>
 
-    <p>Fixed Supply: 1,000,000 HIVE</p>
-    <p>Owner Allocation: 150,000 HIVE</p>
-    <p>Liquidity Allocation: 850,000 HIVE</p>
-    <p>Buy Tax: 2.5%</p>
-    <p>Sell Tax: 2.5%</p>
-    <p>Wallet Transfers: 0%</p>
+    <p class="small">
+      Deploys the new V3 token using the PancakeSwap
+      V2 testnet router and temporary testnet Hive receiver.
+    </p>
 
     <button id="deploy">
-      Deploy HiveToken V2
-    </button>
-  </div>
-
-  <div class="box">
-    <h2>Test Liquidity</h2>
-
-    <p class="warning">
-      TESTNET ONLY — USE tBNB ONLY
-    </p>
-
-    <p class="small">
-      Current test token:
-      0xd6fe280efc5151e87246400c43949208939cc15d
-    </p>
-
-    <label for="hiveAmount">
-      HIVE amount
-    </label>
-
-    <input
-      id="hiveAmount"
-      type="number"
-      value="10000"
-      min="0"
-      step="1"
-    >
-
-    <label for="bnbAmount">
-      tBNB amount
-    </label>
-
-    <input
-      id="bnbAmount"
-      type="number"
-      value="0.01"
-      min="0"
-      step="0.001"
-    >
-
-    <button id="approve">
-      1. Approve HIVE
+      Deploy HiveToken V3
     </button>
 
-    <br>
-
-    <button id="addLiquidity">
-      2. Add Test Liquidity
-    </button>
-
-    <p id="liquidityStatus">
-      Connect wallet first.
+    <p id="contract">
+      V3 not deployed yet.
     </p>
   </div>
 
   <div class="box">
-    <h2>Test Buy HIVE</h2>
-
-    <p class="warning">
-      WALLET 2 — TESTNET ONLY
-    </p>
+    <h2>3. Create / Find Pair</h2>
 
     <p class="small">
-      This test buys HIVE through the PancakeSwap V2
-      testnet liquidity pair so we can verify the
-      2.5% buy tax.
+      Creates the HIVE/WBNB pair for THIS V3 token,
+      or reads the existing pair if one already exists.
     </p>
 
-    <label for="buyBnbAmount">
-      tBNB to spend
-    </label>
-
-    <input
-      id="buyBnbAmount"
-      type="number"
-      value="0.001"
-      min="0"
-      step="0.0001"
-    >
-
-    <button id="buyHive">
-      Test Buy HIVE
-    </button>
-
-    <p id="buyStatus">
-      Connect Wallet 2 first.
-    </p>
-  </div>
-
-  <div class="box">
-    <h2>Check Contract Pair</h2>
-
-    <p class="small">
-      Read-only check. No transaction and no gas.
-    </p>
-
-    <button id="checkPair">
-      Check Pair
+    <button id="createPair">
+      Create / Find V3 Pair
     </button>
 
     <p id="pairStatus">
-      Pair not checked yet.
+      Deploy V3 first.
     </p>
   </div>
 
   <div class="box">
-    <h2>Status</h2>
+    <h2>4. Lock Pair Into HiveToken</h2>
+
+    <p class="warning">
+      IMPORTANT: This can only be done once.
+    </p>
+
+    <p class="small">
+      Do not press this button until the pair address
+      shown above has been checked.
+    </p>
+
+    <button id="setPair">
+      Set & Lock Pair
+    </button>
+  </div>
+
+  <div class="box">
+    <h2>5. Verify Stored Pair</h2>
+
+    <p class="small">
+      Read-only. No transaction and no gas.
+    </p>
+
+    <button id="checkPair">
+      Check Stored Pair
+    </button>
 
     <p id="status">
       Connect your wallet first.
     </p>
-
-    <p id="contract"></p>
   </div>
 
   <script src="./hive-bytecode.js"></script>
@@ -216,21 +143,17 @@
   <script>
     const TESTNET_CHAIN_ID = '0x61';
 
-    // PancakeSwap V2 Router - BSC Testnet
     const PANCAKE_ROUTER =
       '0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
 
-    // Current HiveToken V2 TESTNET contract
-    const HIVE_TOKEN =
-      '0xd6fe280efc5151e87246400c43949208939cc15d';
+    const PANCAKE_FACTORY =
+      '0x6725F303b657a9451d8BA641348b6761A6CC7a17';
 
-    // Temporary TESTNET Hive receiver
+    const WBNB =
+      '0xae13d989dac2f0debff460ac112a837c89baa7cd';
+
     const HIVE_RECEIVER =
       '0x77Dc64A638100407F756393dF33640d5cDf45619';
-
-    // Pair actually used by the successful test buy
-    const EXPECTED_PAIR =
-      '0x1dc7772b91f3cb60989d8b11e4fca14cb4adb040';
 
     const walletText =
       document.getElementById('wallet');
@@ -241,16 +164,12 @@
     const contractText =
       document.getElementById('contract');
 
-    const liquidityStatus =
-      document.getElementById('liquidityStatus');
-
-    const buyStatus =
-      document.getElementById('buyStatus');
-
     const pairStatus =
       document.getElementById('pairStatus');
 
     let account = null;
+    let hiveToken = null;
+    let discoveredPair = null;
 
     function encodeAddress(address) {
       return address
@@ -259,45 +178,28 @@
         .padStart(64, '0');
     }
 
-    function encodeUint(value) {
-      return BigInt(value)
-        .toString(16)
-        .padStart(64, '0');
-    }
+    async function waitForReceipt(txHash) {
+      let receipt = null;
 
-    function parseUnits(value, decimals = 18) {
-      const text = String(value).trim();
+      while (!receipt) {
+        await new Promise(
+          resolve => setTimeout(resolve, 3000)
+        );
 
-      if (!/^\d+(\.\d+)?$/.test(text)) {
-        throw new Error('Invalid amount');
+        receipt =
+          await window.ethereum.request({
+            method: 'eth_getTransactionReceipt',
+            params: [txHash]
+          });
       }
 
-      const parts = text.split('.');
-      const whole = parts[0];
-      const fraction = parts[1] || '';
-
-      if (fraction.length > decimals) {
-        throw new Error('Too many decimal places');
-      }
-
-      const paddedFraction =
-        fraction.padEnd(decimals, '0');
-
-      return BigInt(
-        whole + paddedFraction
-      );
-    }
-
-    function deadlineHex() {
-      return BigInt(
-        Math.floor(Date.now() / 1000) + 1200
-      );
+      return receipt;
     }
 
     async function connectWallet() {
       if (!window.ethereum) {
         statusText.textContent =
-          'Open this page inside a Web3 wallet browser.';
+          'Open this page inside your Web3 wallet browser.';
         return;
       }
 
@@ -307,29 +209,6 @@
           params: [{
             chainId: TESTNET_CHAIN_ID
           }]
-        }).catch(async () => {
-
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: TESTNET_CHAIN_ID,
-              chainName: 'BNB Smart Chain Testnet',
-
-              nativeCurrency: {
-                name: 'tBNB',
-                symbol: 'tBNB',
-                decimals: 18
-              },
-
-              rpcUrls: [
-                'https://data-seed-prebsc-1-s1.bnbchain.org:8545'
-              ],
-
-              blockExplorerUrls: [
-                'https://testnet.bscscan.com'
-              ]
-            }]
-          });
         });
 
         const accounts =
@@ -339,16 +218,11 @@
 
         account = accounts[0];
 
-        walletText.textContent = account;
+        walletText.textContent =
+          account;
 
         statusText.textContent =
           'Wallet connected on BNB Testnet.';
-
-        liquidityStatus.textContent =
-          'Ready.';
-
-        buyStatus.textContent =
-          'Ready for TESTNET buy.';
 
       } catch (error) {
         statusText.textContent =
@@ -371,19 +245,13 @@
       }
 
       try {
-        const routerArg =
-          encodeAddress(PANCAKE_ROUTER);
-
-        const hiveArg =
-          encodeAddress(HIVE_RECEIVER);
-
         const deploymentData =
           window.HIVE_BYTECODE +
-          routerArg +
-          hiveArg;
+          encodeAddress(PANCAKE_ROUTER) +
+          encodeAddress(HIVE_RECEIVER);
 
         statusText.textContent =
-          'Confirm the V2 TESTNET deployment in your wallet...';
+          'Confirm V3 TESTNET deployment in your wallet...';
 
         const txHash =
           await window.ethereum.request({
@@ -395,33 +263,28 @@
           });
 
         statusText.textContent =
-          'Deployment submitted. Waiting for confirmation...';
+          'Deployment submitted. Waiting...';
 
-        let receipt = null;
+        const receipt =
+          await waitForReceipt(txHash);
 
-        while (!receipt) {
-          await new Promise(
-            resolve => setTimeout(resolve, 3000)
+        if (receipt.status !== '0x1') {
+          throw new Error(
+            'Deployment transaction failed.'
           );
-
-          receipt =
-            await window.ethereum.request({
-              method: 'eth_getTransactionReceipt',
-              params: [txHash]
-            });
         }
 
-        if (receipt.status === '0x1') {
-          statusText.textContent =
-            'HiveToken V2 deployed successfully!';
+        hiveToken =
+          receipt.contractAddress;
 
-          contractText.textContent =
-            'Contract: ' +
-            receipt.contractAddress;
-        } else {
-          statusText.textContent =
-            'Deployment transaction failed.';
-        }
+        contractText.textContent =
+          'V3 Contract: ' + hiveToken;
+
+        pairStatus.textContent =
+          'V3 deployed. Pair not created yet.';
+
+        statusText.textContent =
+          'V3 deployment successful. STOP here and verify the contract address before creating the pair.';
 
       } catch (error) {
         statusText.textContent =
@@ -430,220 +293,235 @@
       }
     }
 
-    async function approveHive() {
-      if (!account) {
-        liquidityStatus.textContent =
-          'Connect your wallet first.';
+    async function readFactoryPair() {
+      if (!hiveToken) {
+        throw new Error(
+          'Deploy V3 first.'
+        );
+      }
+
+      /*
+        getPair(address,address)
+        selector = 0xe6a43905
+      */
+
+      const data =
+        '0xe6a43905' +
+        encodeAddress(hiveToken) +
+        encodeAddress(WBNB);
+
+      const result =
+        await window.ethereum.request({
+          method: 'eth_call',
+          params: [{
+            to: PANCAKE_FACTORY,
+            data: data
+          }, 'latest']
+        });
+
+      if (!result || result === '0x') {
+        throw new Error(
+          'Factory pair lookup failed.'
+        );
+      }
+
+      return '0x' + result.slice(-40);
+    }
+
+    async function createOrFindPair() {
+      if (!account || !hiveToken) {
+        pairStatus.textContent =
+          'Connect wallet and deploy V3 first.';
         return;
       }
 
       try {
-        const hiveInput =
-          document.getElementById('hiveAmount').value;
+        pairStatus.textContent =
+          'Checking factory for existing pair...';
 
-        const hiveWei =
-          parseUnits(hiveInput, 18);
+        let pair =
+          await readFactoryPair();
 
-        if (hiveWei <= 0n) {
-          throw new Error(
-            'HIVE amount must be greater than zero.'
-          );
+        const ZERO =
+          '0x0000000000000000000000000000000000000000';
+
+        if (
+          pair.toLowerCase() !==
+          ZERO.toLowerCase()
+        ) {
+          discoveredPair = pair;
+
+          pairStatus.textContent =
+            'Existing V3 pair: ' +
+            discoveredPair;
+
+          return;
         }
 
-        const selector = '095ea7b3';
+        /*
+          createPair(address,address)
+          selector = 0xc9c65396
+        */
 
         const data =
-          '0x' +
-          selector +
-          encodeAddress(PANCAKE_ROUTER) +
-          encodeUint(hiveWei);
+          '0xc9c65396' +
+          encodeAddress(hiveToken) +
+          encodeAddress(WBNB);
 
-        liquidityStatus.textContent =
-          'Confirm HIVE approval in your wallet...';
+        pairStatus.textContent =
+          'Confirm pair creation in your wallet...';
 
         const txHash =
           await window.ethereum.request({
             method: 'eth_sendTransaction',
             params: [{
               from: account,
-              to: HIVE_TOKEN,
+              to: PANCAKE_FACTORY,
               data: data
             }]
           });
 
-        liquidityStatus.textContent =
-          'Approval submitted: ' + txHash;
+        const receipt =
+          await waitForReceipt(txHash);
+
+        if (receipt.status !== '0x1') {
+          throw new Error(
+            'Pair creation failed.'
+          );
+        }
+
+        pair =
+          await readFactoryPair();
+
+        if (
+          pair.toLowerCase() ===
+          ZERO.toLowerCase()
+        ) {
+          throw new Error(
+            'Factory still reports zero pair.'
+          );
+        }
+
+        discoveredPair =
+          pair;
+
+        pairStatus.textContent =
+          'V3 pair created: ' +
+          discoveredPair +
+          ' — STOP and verify this address before locking it.';
 
       } catch (error) {
-        liquidityStatus.textContent =
+        pairStatus.textContent =
           error.message ||
-          'Approval failed.';
+          'Pair setup failed.';
       }
     }
 
-    async function addTestLiquidity() {
-      if (!account) {
-        liquidityStatus.textContent =
-          'Connect your wallet first.';
+    async function setPair() {
+      if (
+        !account ||
+        !hiveToken ||
+        !discoveredPair
+      ) {
+        statusText.textContent =
+          'Deploy V3 and create/find its pair first.';
         return;
       }
 
       try {
-        const hiveInput =
-          document.getElementById('hiveAmount').value;
+        /*
+          setPair(address)
 
-        const bnbInput =
-          document.getElementById('bnbAmount').value;
+          We derive the selector at runtime instead
+          of hard-coding an unverified selector.
+        */
 
-        const hiveWei =
-          parseUnits(hiveInput, 18);
+        const selectorHash =
+          await window.ethereum.request({
+            method: 'web3_sha3',
+            params: [
+              '0x' +
+              Array.from(
+                new TextEncoder()
+                  .encode('setPair(address)')
+              )
+              .map(
+                b =>
+                  b.toString(16)
+                    .padStart(2, '0')
+              )
+              .join('')
+            ]
+          });
 
-        const bnbWei =
-          parseUnits(bnbInput, 18);
-
-        if (hiveWei <= 0n || bnbWei <= 0n) {
-          throw new Error(
-            'Both amounts must be greater than zero.'
-          );
-        }
-
-        const selector = 'f305d719';
-
-        const amountTokenMin = hiveWei;
-        const amountETHMin = bnbWei;
+        const selector =
+          selectorHash.slice(2, 10);
 
         const data =
           '0x' +
           selector +
-          encodeAddress(HIVE_TOKEN) +
-          encodeUint(hiveWei) +
-          encodeUint(amountTokenMin) +
-          encodeUint(amountETHMin) +
-          encodeAddress(account) +
-          encodeUint(deadlineHex());
+          encodeAddress(discoveredPair);
 
-        liquidityStatus.textContent =
-          'Confirm TESTNET liquidity transaction in your wallet...';
+        statusText.textContent =
+          'Confirm ONE-TIME pair lock in your wallet...';
 
         const txHash =
           await window.ethereum.request({
             method: 'eth_sendTransaction',
             params: [{
               from: account,
-              to: PANCAKE_ROUTER,
-              value:
-                '0x' + bnbWei.toString(16),
+              to: hiveToken,
               data: data
             }]
           });
 
-        liquidityStatus.textContent =
-          'Liquidity submitted: ' + txHash;
+        const receipt =
+          await waitForReceipt(txHash);
 
-      } catch (error) {
-        liquidityStatus.textContent =
-          error.message ||
-          'Add liquidity failed.';
-      }
-    }
-
-    async function testBuyHive() {
-      if (!account) {
-        buyStatus.textContent =
-          'Connect Wallet 2 first.';
-        return;
-      }
-
-      try {
-        const bnbInput =
-          document.getElementById('buyBnbAmount').value;
-
-        const bnbWei =
-          parseUnits(bnbInput, 18);
-
-        if (bnbWei <= 0n) {
+        if (receipt.status !== '0x1') {
           throw new Error(
-            'tBNB amount must be greater than zero.'
+            'Pair lock transaction failed.'
           );
         }
 
-        const selector = 'b6f9de95';
-
-        const WBNB =
-          '0xae13d989dac2f0debff460ac112a837c89baa7cd';
-
-        const amountOutMin = 0n;
-        const pathOffset = 128n;
-        const pathLength = 2n;
-
-        const data =
-          '0x' +
-          selector +
-          encodeUint(amountOutMin) +
-          encodeUint(pathOffset) +
-          encodeAddress(account) +
-          encodeUint(deadlineHex()) +
-          encodeUint(pathLength) +
-          encodeAddress(WBNB) +
-          encodeAddress(HIVE_TOKEN);
-
-        buyStatus.textContent =
-          'Confirm TESTNET HIVE buy in your wallet...';
-
-        const txHash =
-          await window.ethereum.request({
-            method: 'eth_sendTransaction',
-            params: [{
-              from: account,
-              to: PANCAKE_ROUTER,
-              value:
-                '0x' + bnbWei.toString(16),
-              data: data
-            }]
-          });
-
-        buyStatus.textContent =
-          'Buy submitted: ' + txHash;
+        statusText.textContent =
+          'Pair lock succeeded. Now use Check Stored Pair.';
 
       } catch (error) {
-        buyStatus.textContent =
+        statusText.textContent =
           error.message ||
-          'Test buy failed.';
+          'Pair lock failed.';
       }
     }
 
     async function checkPair() {
-      if (!window.ethereum) {
-        pairStatus.textContent =
-          'Open this page inside your Web3 wallet browser.';
+      if (!hiveToken) {
+        statusText.textContent =
+          'Deploy V3 first.';
         return;
       }
 
       try {
-        pairStatus.textContent =
-          'Reading pair from HiveToken...';
-
         /*
           pair()
-          Read-only eth_call.
-          No transaction and no gas.
+          selector = 0xa8aa1b31
         */
+
         const result =
           await window.ethereum.request({
             method: 'eth_call',
             params: [{
-              to: HIVE_TOKEN,
+              to: hiveToken,
               data: '0xa8aa1b31'
             }, 'latest']
           });
 
         if (
           !result ||
-          result === '0x' ||
-          result.length < 42
+          result === '0x'
         ) {
           throw new Error(
-            'Contract returned no pair address.'
+            'No pair result returned.'
           );
         }
 
@@ -651,22 +529,27 @@
           '0x' + result.slice(-40);
 
         if (
+          discoveredPair &&
           storedPair.toLowerCase() ===
-          EXPECTED_PAIR.toLowerCase()
+          discoveredPair.toLowerCase()
         ) {
-          pairStatus.textContent =
+          statusText.textContent =
             'MATCH ✅ Stored pair: ' +
             storedPair;
         } else {
-          pairStatus.textContent =
-            'MISMATCH ❌ Stored pair: ' +
+          statusText.textContent =
+            'Stored pair: ' +
             storedPair +
-            ' | Swap pair: ' +
-            EXPECTED_PAIR;
+            (
+              discoveredPair
+                ? ' | Expected: ' +
+                  discoveredPair
+                : ''
+            );
         }
 
       } catch (error) {
-        pairStatus.textContent =
+        statusText.textContent =
           error.message ||
           'Pair check failed.';
       }
@@ -687,24 +570,17 @@
       );
 
     document
-      .getElementById('approve')
+      .getElementById('createPair')
       .addEventListener(
         'click',
-        approveHive
+        createOrFindPair
       );
 
     document
-      .getElementById('addLiquidity')
+      .getElementById('setPair')
       .addEventListener(
         'click',
-        addTestLiquidity
-      );
-
-    document
-      .getElementById('buyHive')
-      .addEventListener(
-        'click',
-        testBuyHive
+        setPair
       );
 
     document
