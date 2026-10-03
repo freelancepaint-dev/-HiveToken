@@ -1,212 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HiveToken V3 Testnet</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HiveToken V3 Testnet</title>
 
-  <style>
-    * { box-sizing: border-box; }
+<style>
+* { box-sizing: border-box; }
 
-    body {
-      margin: 0;
-      padding: 24px;
-      background: #0b100b;
-      color: #f5f1df;
-      font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.45;
-    }
+body {
+  margin: 0;
+  padding: 24px;
+  background: #0b100b;
+  color: #f5f1df;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.45;
+}
 
-    .wrap {
-      max-width: 760px;
-      margin: 0 auto;
-    }
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+}
 
-    h1 {
-      font-size: 42px;
-      margin: 0 0 12px;
-    }
+h1 {
+  font-size: 42px;
+  margin: 0 0 12px;
+}
 
-    h2 {
-      font-size: 32px;
-      margin-top: 0;
-    }
+h2 {
+  font-size: 32px;
+  margin-top: 0;
+}
 
-    .warning {
-      color: #ffd261;
-      font-weight: bold;
-      font-size: 22px;
-      margin-bottom: 28px;
-    }
+.warning {
+  color: #ffd261;
+  font-weight: bold;
+  font-size: 22px;
+  margin-bottom: 28px;
+}
 
-    .card {
-      border: 2px solid #555b55;
-      border-radius: 28px;
-      padding: 28px;
-      margin: 22px 0;
-      background: #0e140e;
-    }
+.card {
+  border: 2px solid #555b55;
+  border-radius: 28px;
+  padding: 28px;
+  margin: 22px 0;
+  background: #0e140e;
+}
 
-    button {
-      border: 0;
-      border-radius: 22px;
-      padding: 20px 28px;
-      font-size: 24px;
-      font-weight: bold;
-      color: #0787f5;
-      background: #eeeeee;
-      margin: 12px 0;
-      cursor: pointer;
-    }
+button {
+  border: 0;
+  border-radius: 22px;
+  padding: 20px 28px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #0787f5;
+  background: #eeeeee;
+  margin: 12px 0;
+  cursor: pointer;
+}
 
-    button:active { opacity: 0.8; }
+button:active { opacity: 0.8; }
 
-    .status {
-      margin-top: 18px;
-      font-size: 20px;
-      overflow-wrap: anywhere;
-      white-space: pre-wrap;
-    }
+.status {
+  margin-top: 18px;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
 
-    .important {
-      color: #ffd261;
-      font-size: 21px;
-      font-weight: bold;
-    }
+.important {
+  color: #ffd261;
+  font-size: 21px;
+  font-weight: bold;
+}
 
-    .small {
-      color: #c8c8c8;
-      font-size: 18px;
-    }
+.small {
+  color: #c8c8c8;
+  font-size: 18px;
+}
 
-    .address {
-      overflow-wrap: anywhere;
-    }
-  </style>
+.address {
+  overflow-wrap: anywhere;
+}
+</style>
 </head>
 
 <body>
 <div class="wrap">
 
-  <h1>🐝 HiveToken V3</h1>
+<h1>🐝 HiveToken V3</h1>
 
-  <div class="warning">
-    BNB SMART CHAIN TESTNET ONLY
-  </div>
+<div class="warning">
+BNB SMART CHAIN TESTNET ONLY
+</div>
 
-  <div class="card">
-    <h2>1. Wallet</h2>
+<div class="card">
+<h2>1. Wallet</h2>
 
-    <button onclick="connectWallet()">Connect Wallet</button>
+<button onclick="connectWallet()">Connect Wallet</button>
 
-    <div id="walletStatus" class="status">
-      Wallet not connected.
-    </div>
-  </div>
+<div id="walletStatus" class="status">
+Wallet not connected.
+</div>
+</div>
 
-  <div class="card">
-    <h2>2. HiveToken V3</h2>
 
-    <p class="small">
-      The V3 token is already deployed. Do not deploy it again.
-    </p>
+<div class="card">
+<h2>2. HiveToken V3</h2>
 
-    <div class="status">
-      <strong>V3 Contract:</strong><br>
-      <span class="address">
-        0xf10f0091a7504761e5e0cab7a7de34df077871f8
-      </span>
-    </div>
-  </div>
+<p class="small">
+V3 is already deployed. Do not deploy it again.
+</p>
 
-  <div class="card">
-    <h2>3. Verified HIVE/WBNB Pair</h2>
+<div class="status">
+<strong>V3 Contract:</strong><br>
+<span class="address">
+0xf10f0091a7504761e5e0cab7a7de34df077871f8
+</span>
+</div>
+</div>
 
-    <p class="small">
-      This pair was verified on BSC Testnet using token0 and token1.
-    </p>
 
-    <div class="status">
-      <strong>Verified Pair:</strong><br>
-      <span class="address">
-        0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6
-      </span>
-    </div>
+<div class="card">
+<h2>3. Verified HIVE/WBNB Pair</h2>
 
-    <div class="status">
-      <strong>WBNB:</strong><br>
-      <span class="address">
-        0xae13d989dac2f0debff460ac112a837c89baa7cd
-      </span>
-    </div>
-  </div>
+<p class="small">
+This pair was verified using token0 and token1 on BSC Testnet.
+</p>
 
-  <div class="card">
-    <h2>4. Pair Lock</h2>
+<div class="status">
+<strong>Verified Pair:</strong><br>
+<span class="address">
+0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6
+</span>
+</div>
+</div>
 
-    <p class="important">
-      Pair setup has already been completed.
-    </p>
 
-    <p class="small">
-      Do not attempt to set another pair.
-    </p>
-  </div>
+<div class="card">
+<h2>4. Pair Lock</h2>
 
-  <div class="card">
-    <h2>5. Verify Stored Pair</h2>
+<p class="important">
+Pair setup completed.
+</p>
 
-    <p class="small">
-      Read-only. No transaction and no gas.
-    </p>
+<p class="small">
+Do not attempt to set another pair.
+</p>
+</div>
 
-    <button onclick="checkStoredPair()">
-      Check Stored Pair
-    </button>
 
-    <div id="storedPairStatus" class="status">
-      Not checked yet.
-    </div>
-  </div>
+<div class="card">
+<h2>5. Verify Stored Pair</h2>
 
-  <div class="card">
-    <h2>6. Approve Test Liquidity</h2>
+<p class="small">
+Read-only. No transaction and no gas.
+</p>
 
-    <p class="small">
-      Approves exactly 10,000 HIVE for the PancakeSwap V2
-      BSC Testnet router.
-    </p>
+<button onclick="checkStoredPair()">
+Check Stored Pair
+</button>
 
-    <p class="important">
-      This is an allowance only. It does not add liquidity
-      and does not transfer 10,000 HIVE by itself.
-    </p>
+<div id="storedPairStatus" class="status">
+Not checked yet.
+</div>
+</div>
 
-    <button onclick="approveLiquidity()">
-      Approve 10,000 HIVE
-    </button>
 
-    <div id="approveStatus" class="status">
-      Approval not submitted.
-    </div>
-  </div>
+<div class="card">
+<h2>6. HIVE Approval</h2>
+
+<p class="important">
+10,000 HIVE approval was already submitted.
+</p>
+
+<p class="small">
+Do not approve again unless the previous approval failed.
+</p>
+</div>
+
+
+<div class="card">
+<h2>7. Add Test Liquidity</h2>
+
+<p class="small">
+Adds exactly:
+</p>
+
+<div class="status">
+<strong>10,000 HIVE</strong><br>
++<br>
+<strong>0.01 tBNB</strong>
+</div>
+
+<p class="important">
+TESTNET ONLY. LP tokens will be sent to the connected wallet.
+</p>
+
+<button onclick="addLiquidity()">
+Add 10,000 HIVE + 0.01 tBNB
+</button>
+
+<div id="liquidityStatus" class="status">
+Liquidity not submitted.
+</div>
+</div>
 
 </div>
+
 
 <script>
 const TESTNET_CHAIN_ID = '0x61';
 
 const HIVE_TOKEN =
-  '0xf10f0091a7504761e5e0cab7a7de34df077871f8';
+'0xf10f0091a7504761e5e0cab7a7de34df077871f8';
 
 const VERIFIED_PAIR =
-  '0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6';
-
-const WBNB =
-  '0xae13d989dac2f0debff460ac112a837c89baa7cd';
+'0x56b09a344c35c4e3c2d14beb76ebae951ceb51a6';
 
 const PANCAKE_ROUTER =
-  '0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
+'0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
 
 let account = null;
 
@@ -219,19 +232,20 @@ function padAddress(address) {
 }
 
 
-function padUint256(hexValue) {
-  return hexValue
-    .replace(/^0x/, '')
+function padUint(value) {
+  return BigInt(value)
+    .toString(16)
     .padStart(64, '0');
 }
 
 
 async function connectWallet() {
-  const status = document.getElementById('walletStatus');
+  const status =
+    document.getElementById('walletStatus');
 
   try {
     if (!window.ethereum) {
-      status.innerText = 'No injected wallet detected.';
+      status.innerText = 'No wallet detected.';
       return;
     }
 
@@ -250,7 +264,8 @@ async function connectWallet() {
     });
 
     if (!accounts || !accounts.length) {
-      status.innerText = 'No wallet account connected.';
+      status.innerText =
+        'No wallet account connected.';
       return;
     }
 
@@ -261,7 +276,8 @@ async function connectWallet() {
 
   } catch (err) {
     status.innerText =
-      'Wallet connection error: ' + (err.message || err);
+      'Wallet connection error: ' +
+      (err.message || err);
   }
 }
 
@@ -271,21 +287,6 @@ async function checkStoredPair() {
     document.getElementById('storedPairStatus');
 
   try {
-    if (!window.ethereum) {
-      status.innerText = 'No wallet detected.';
-      return;
-    }
-
-    const chainId = await ethereum.request({
-      method: 'eth_chainId'
-    });
-
-    if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
-      status.innerText =
-        'Switch to BNB Smart Chain Testnet.';
-      return;
-    }
-
     const result = await ethereum.request({
       method: 'eth_call',
       params: [{
@@ -294,12 +295,8 @@ async function checkStoredPair() {
       }, 'latest']
     });
 
-    if (!result || result === '0x') {
-      status.innerText = 'Could not read pair().';
-      return;
-    }
-
-    const storedPair = '0x' + result.slice(-40);
+    const storedPair =
+      '0x' + result.slice(-40);
 
     if (
       storedPair.toLowerCase() ===
@@ -307,31 +304,30 @@ async function checkStoredPair() {
     ) {
       status.innerText =
         'MATCH ✅\n\nStored pair:\n' +
-        storedPair +
-        '\n\nVerified pair:\n' +
-        VERIFIED_PAIR;
+        storedPair;
     } else {
       status.innerText =
         'MISMATCH ❌\n\nStored pair:\n' +
-        storedPair +
-        '\n\nExpected pair:\n' +
-        VERIFIED_PAIR;
+        storedPair;
     }
 
   } catch (err) {
     status.innerText =
-      'Read error: ' + (err.message || err);
+      'Read error: ' +
+      (err.message || err);
   }
 }
 
 
-async function approveLiquidity() {
+async function addLiquidity() {
   const status =
-    document.getElementById('approveStatus');
+    document.getElementById('liquidityStatus');
 
   try {
+
     if (!window.ethereum) {
-      status.innerText = 'No wallet detected.';
+      status.innerText =
+        'No wallet detected.';
       return;
     }
 
@@ -341,7 +337,7 @@ async function approveLiquidity() {
 
     if (chainId.toLowerCase() !== TESTNET_CHAIN_ID) {
       status.innerText =
-        'STOP: Wallet is not on BNB Smart Chain Testnet.';
+        'STOP: Switch to BNB Smart Chain Testnet.';
       return;
     }
 
@@ -360,22 +356,50 @@ async function approveLiquidity() {
     }
 
     /*
-      approve(address,uint256)
-      selector = 0x095ea7b3
+      PancakeSwap V2:
+      addLiquidityETH(
+        address token,
+        uint amountTokenDesired,
+        uint amountTokenMin,
+        uint amountETHMin,
+        address to,
+        uint deadline
+      )
 
-      10,000 HIVE with 18 decimals:
-      10000 * 10^18
-      = 10000000000000000000000
-      = 0x21e19e0c9bab2400000
+      Selector:
+      0xf305d719
     */
 
-    const amountHex =
-      '0x21e19e0c9bab2400000';
+    const selector = '0xf305d719';
+
+    const amountTokenDesired =
+      10000n * (10n ** 18n);
+
+    /*
+      Test liquidity setup is new/empty,
+      so these minimums are set to zero.
+      Do not reuse this approach for mainnet.
+    */
+    const amountTokenMin = 0n;
+    const amountETHMin = 0n;
+
+    const deadline =
+      BigInt(Math.floor(Date.now() / 1000) + 1200);
 
     const data =
-      '0x095ea7b3' +
-      padAddress(PANCAKE_ROUTER) +
-      padUint256(amountHex);
+      selector +
+      padAddress(HIVE_TOKEN) +
+      padUint(amountTokenDesired) +
+      padUint(amountTokenMin) +
+      padUint(amountETHMin) +
+      padAddress(account) +
+      padUint(deadline);
+
+    /*
+      0.01 BNB = 10^16 wei
+    */
+    const value =
+      '0x2386f26fc10000';
 
     status.innerText =
       'Waiting for wallet confirmation...';
@@ -384,26 +408,28 @@ async function approveLiquidity() {
       method: 'eth_sendTransaction',
       params: [{
         from: account,
-        to: HIVE_TOKEN,
-        value: '0x0',
+        to: PANCAKE_ROUTER,
+        value: value,
         data: data
       }]
     });
 
     status.innerText =
-      'Approval submitted:\n' +
+      'Liquidity transaction submitted:\n' +
       txHash +
-      '\n\nDo not add liquidity yet.';
+      '\n\nDo not submit another liquidity transaction.';
 
   } catch (err) {
     status.innerText =
-      'Approval error: ' + (err.message || err);
+      'Liquidity error: ' +
+      (err.message || err);
   }
 }
 
 
 async function loadExistingWallet() {
   try {
+
     if (!window.ethereum) return;
 
     const chainId = await ethereum.request({
