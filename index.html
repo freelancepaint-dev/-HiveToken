@@ -32,12 +32,36 @@
       cursor: pointer;
     }
 
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 18px;
+      padding: 14px;
+      margin: 6px 0 14px 0;
+      border-radius: 10px;
+      border: 1px solid #777;
+    }
+
+    label {
+      display: block;
+      margin-top: 8px;
+      font-weight: bold;
+    }
+
     .warning {
       color: #ffd166;
       font-weight: bold;
     }
 
-    #wallet, #contract, #status {
+    .small {
+      font-size: 14px;
+      color: #c9c9c9;
+    }
+
+    #wallet,
+    #contract,
+    #status,
+    #liquidityStatus {
       word-break: break-all;
     }
   </style>
@@ -75,6 +99,57 @@
   </div>
 
   <div class="box">
+    <h2>Test Liquidity</h2>
+
+    <p class="warning">
+      TESTNET ONLY — USE tBNB ONLY
+    </p>
+
+    <p class="small">
+      Current test token:
+      0xd6fe280efc5151e87246400c43949208939cc15d
+    </p>
+
+    <label for="hiveAmount">
+      HIVE amount
+    </label>
+
+    <input
+      id="hiveAmount"
+      type="number"
+      value="10000"
+      min="0"
+      step="1"
+    >
+
+    <label for="bnbAmount">
+      tBNB amount
+    </label>
+
+    <input
+      id="bnbAmount"
+      type="number"
+      value="0.01"
+      min="0"
+      step="0.001"
+    >
+
+    <button id="approve">
+      1. Approve HIVE
+    </button>
+
+    <br>
+
+    <button id="addLiquidity">
+      2. Add Test Liquidity
+    </button>
+
+    <p id="liquidityStatus">
+      Connect wallet first.
+    </p>
+  </div>
+
+  <div class="box">
     <h2>Status</h2>
 
     <p id="status">
@@ -91,7 +166,11 @@
 
     // PancakeSwap V2 Router - BSC Testnet
     const PANCAKE_ROUTER =
-      '0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3';
+      '0xD99D1c33F9fC3444f8101754aBC46c52416550D1';
+
+    // Current HiveToken V2 TESTNET contract
+    const HIVE_TOKEN =
+      '0xd6fe280efc5151e87246400c43949208939cc15d';
 
     // Temporary TESTNET Hive receiver
     const HIVE_RECEIVER =
@@ -106,6 +185,9 @@
     const contractText =
       document.getElementById('contract');
 
+    const liquidityStatus =
+      document.getElementById('liquidityStatus');
+
     let account = null;
 
     function encodeAddress(address) {
@@ -113,6 +195,41 @@
         .toLowerCase()
         .replace(/^0x/, '')
         .padStart(64, '0');
+    }
+
+    function encodeUint(value) {
+      return BigInt(value)
+        .toString(16)
+        .padStart(64, '0');
+    }
+
+    function parseUnits(value, decimals = 18) {
+      const text = String(value).trim();
+
+      if (!/^\d+(\.\d+)?$/.test(text)) {
+        throw new Error('Invalid amount');
+      }
+
+      const parts = text.split('.');
+      const whole = parts[0];
+      const fraction = parts[1] || '';
+
+      if (fraction.length > decimals) {
+        throw new Error('Too many decimal places');
+      }
+
+      const paddedFraction =
+        fraction.padEnd(decimals, '0');
+
+      return BigInt(
+        whole + paddedFraction
+      );
+    }
+
+    function deadlineHex() {
+      return BigInt(
+        Math.floor(Date.now() / 1000) + 1200
+      );
     }
 
     async function connectWallet() {
@@ -151,7 +268,6 @@
               ]
             }]
           });
-
         });
 
         const accounts =
@@ -164,10 +280,12 @@
         walletText.textContent = account;
 
         statusText.textContent =
-          'Wallet connected. Ready to deploy HiveToken V2 on BNB Testnet.';
+          'Wallet connected on BNB Testnet.';
+
+        liquidityStatus.textContent =
+          'Ready. Approve HIVE first.';
 
       } catch (error) {
-
         statusText.textContent =
           error.message ||
           'Wallet connection failed.';
@@ -175,7 +293,6 @@
     }
 
     async function deployToken() {
-
       if (!account) {
         statusText.textContent =
           'Connect your wallet first.';
@@ -189,7 +306,6 @@
       }
 
       try {
-
         const routerArg =
           encodeAddress(PANCAKE_ROUTER);
 
@@ -207,7 +323,6 @@
         const txHash =
           await window.ethereum.request({
             method: 'eth_sendTransaction',
-
             params: [{
               from: account,
               data: deploymentData
@@ -220,41 +335,166 @@
         let receipt = null;
 
         while (!receipt) {
-
           await new Promise(
-            resolve =>
-              setTimeout(resolve, 3000)
+            resolve => setTimeout(resolve, 3000)
           );
 
           receipt =
             await window.ethereum.request({
-              method:
-                'eth_getTransactionReceipt',
-
+              method: 'eth_getTransactionReceipt',
               params: [txHash]
             });
         }
 
         if (receipt.status === '0x1') {
-
           statusText.textContent =
             'HiveToken V2 deployed successfully!';
 
           contractText.textContent =
             'Contract: ' +
             receipt.contractAddress;
-
         } else {
-
           statusText.textContent =
             'Deployment transaction failed.';
         }
 
       } catch (error) {
-
         statusText.textContent =
           error.message ||
           'Deployment failed.';
+      }
+    }
+
+    async function approveHive() {
+      if (!account) {
+        liquidityStatus.textContent =
+          'Connect your wallet first.';
+        return;
+      }
+
+      try {
+        const hiveInput =
+          document.getElementById('hiveAmount').value;
+
+        const hiveWei =
+          parseUnits(hiveInput, 18);
+
+        if (hiveWei <= 0n) {
+          throw new Error(
+            'HIVE amount must be greater than zero.'
+          );
+        }
+
+        // approve(address,uint256)
+        const selector = '095ea7b3';
+
+        const data =
+          '0x' +
+          selector +
+          encodeAddress(PANCAKE_ROUTER) +
+          encodeUint(hiveWei);
+
+        liquidityStatus.textContent =
+          'Confirm HIVE approval in your wallet...';
+
+        const txHash =
+          await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [{
+              from: account,
+              to: HIVE_TOKEN,
+              data: data
+            }]
+          });
+
+        liquidityStatus.textContent =
+          'Approval submitted: ' + txHash;
+
+      } catch (error) {
+        liquidityStatus.textContent =
+          error.message ||
+          'Approval failed.';
+      }
+    }
+
+    async function addTestLiquidity() {
+      if (!account) {
+        liquidityStatus.textContent =
+          'Connect your wallet first.';
+        return;
+      }
+
+      try {
+        const hiveInput =
+          document.getElementById('hiveAmount').value;
+
+        const bnbInput =
+          document.getElementById('bnbAmount').value;
+
+        const hiveWei =
+          parseUnits(hiveInput, 18);
+
+        const bnbWei =
+          parseUnits(bnbInput, 18);
+
+        if (hiveWei <= 0n || bnbWei <= 0n) {
+          throw new Error(
+            'Both amounts must be greater than zero.'
+          );
+        }
+
+        /*
+          addLiquidityETH(
+            address token,
+            uint amountTokenDesired,
+            uint amountTokenMin,
+            uint amountETHMin,
+            address to,
+            uint deadline
+          )
+
+          Selector:
+          0xf305d719
+        */
+
+        const selector = 'f305d719';
+
+        // First-liquidity TESTNET transaction.
+        // Minimums are set equal to desired amounts.
+        const amountTokenMin = hiveWei;
+        const amountETHMin = bnbWei;
+
+        const data =
+          '0x' +
+          selector +
+          encodeAddress(HIVE_TOKEN) +
+          encodeUint(hiveWei) +
+          encodeUint(amountTokenMin) +
+          encodeUint(amountETHMin) +
+          encodeAddress(account) +
+          encodeUint(deadlineHex());
+
+        liquidityStatus.textContent =
+          'Confirm TESTNET liquidity transaction in your wallet...';
+
+        const txHash =
+          await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [{
+              from: account,
+              to: PANCAKE_ROUTER,
+              value: '0x' + bnbWei.toString(16),
+              data: data
+            }]
+          });
+
+        liquidityStatus.textContent =
+          'Liquidity submitted: ' + txHash;
+
+      } catch (error) {
+        liquidityStatus.textContent =
+          error.message ||
+          'Add liquidity failed.';
       }
     }
 
@@ -270,6 +510,20 @@
       .addEventListener(
         'click',
         deployToken
+      );
+
+    document
+      .getElementById('approve')
+      .addEventListener(
+        'click',
+        approveHive
+      );
+
+    document
+      .getElementById('addLiquidity')
+      .addEventListener(
+        'click',
+        addTestLiquidity
       );
   </script>
 
