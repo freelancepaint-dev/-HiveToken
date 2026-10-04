@@ -10,10 +10,7 @@
   content="width=device-width, initial-scale=1.0"
 >
 
-<title>
-HiveToken V4 Buy Tax Test
-</title>
-
+<title>HiveToken V4 Sell Tax Test</title>
 
 <style>
 
@@ -84,49 +81,44 @@ button:disabled{
 
 <body>
 
-
 <div class="card">
 
-
 <h1>
-🐝 HiveToken V4 Buy Tax Test
+🐝 HiveToken V4 Sell Tax Test
 </h1>
 
 
 <div class="box">
 
-<strong>
-TESTNET ONLY
-</strong>
+<strong>TESTNET ONLY</strong>
 
 <br><br>
 
-Buy amount:
+Sell amount:
 
 <br>
 
-<strong>
-0.001 tBNB
-</strong>
+<strong>100 HIVE</strong>
 
 <br><br>
 
-Expected HIVE buy tax:
+Expected sell tax:
 
 <br>
 
-<strong>
-2.5%
-</strong>
+<strong>2.5 HIVE = 2.5%</strong>
+
+<br><br>
+
+This test is designed to remain below
+the 100 HIVE automatic tax-swap threshold.
 
 </div>
 
 
 <div class="box">
 
-<strong>
-HiveToken V4
-</strong>
+<strong>HiveToken V4</strong>
 
 <br><br>
 
@@ -134,9 +126,7 @@ HiveToken V4
 
 <br><br>
 
-<strong>
-V4 HIVE/WBNB Pair
-</strong>
+<strong>V4 HIVE/WBNB Pair</strong>
 
 <br><br>
 
@@ -145,19 +135,26 @@ V4 HIVE/WBNB Pair
 </div>
 
 
-<button
-  onclick="connectWallet()"
->
-1. Connect Buyer Wallet
+<button onclick="connectWallet()">
+1. Connect Seller Wallet
 </button>
 
 
 <button
-  id="buyButton"
-  onclick="runBuyTest()"
+  id="approveButton"
+  onclick="approveHive()"
   disabled
 >
-2. Buy HIVE With 0.001 tBNB
+2. Approve 100 HIVE
+</button>
+
+
+<button
+  id="sellButton"
+  onclick="runSellTest()"
+  disabled
+>
+3. Sell 100 HIVE
 </button>
 
 
@@ -167,7 +164,6 @@ V4 HIVE/WBNB Pair
 >
 Ready.
 </div>
-
 
 </div>
 
@@ -179,43 +175,41 @@ src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js">
 
 <script>
 
-
 /* =========================================================
    CONFIGURATION
    ========================================================= */
 
-
 const TOKEN =
 "0x305cecf060209f758b74dbef91758021f113c608";
-
 
 const PAIR =
 "0x3f8016dea6df1323fe2bee493b15593a8a2b149e";
 
-
 const ROUTER =
 "0xd99d1c33f9fc3444f8101754abc46c52416550d1";
-
 
 const WBNB =
 "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
-
-const BUY_AMOUNT =
-ethers.utils.parseEther(
-  "0.001"
+const SELL_AMOUNT =
+ethers.utils.parseUnits(
+  "100",
+  18
 );
 
+const SWAP_THRESHOLD =
+ethers.utils.parseUnits(
+  "100",
+  18
+);
 
 let account =
   null;
 
 
-
 /* =========================================================
-   WALLET PROVIDER
+   WALLET
    ========================================================= */
-
 
 function getEthereum(){
 
@@ -224,11 +218,10 @@ function getEthereum(){
   ){
 
     throw new Error(
-      "Wallet provider not found. Open this page inside your wallet browser."
+      "Wallet provider not found."
     );
 
   }
-
 
   if(
     typeof window.ethereum.request !==
@@ -241,11 +234,9 @@ function getEthereum(){
 
   }
 
-
   return window.ethereum;
 
 }
-
 
 
 function getProvider(){
@@ -257,7 +248,6 @@ function getProvider(){
 }
 
 
-
 function getSigner(){
 
   return getProvider().getSigner();
@@ -265,30 +255,20 @@ function getSigner(){
 }
 
 
-
 /* =========================================================
-   VERIFY BSC TESTNET
+   NETWORK
    ========================================================= */
-
 
 async function requireTestnet(){
 
-  const wallet =
-    getEthereum();
-
-
   const chainId =
-    await wallet.request({
-
-      method:
-        "eth_chainId"
-
+    await getEthereum().request({
+      method:"eth_chainId"
     });
 
 
   if(
-    chainId.toLowerCase() !==
-    "0x61"
+    chainId.toLowerCase() !== "0x61"
   ){
 
     throw new Error(
@@ -297,17 +277,12 @@ async function requireTestnet(){
 
   }
 
-
-  return chainId;
-
 }
 
 
-
 /* =========================================================
-   CONNECT BUYER WALLET
+   CONNECT SELLER
    ========================================================= */
-
 
 async function connectWallet(){
 
@@ -316,41 +291,32 @@ async function connectWallet(){
       "status"
     );
 
-
-  const buyButton =
+  const approveButton =
     document.getElementById(
-      "buyButton"
+      "approveButton"
+    );
+
+  const sellButton =
+    document.getElementById(
+      "sellButton"
     );
 
 
   try{
 
-
-    buyButton.disabled =
+    approveButton.disabled =
       true;
 
+    sellButton.disabled =
+      true;
 
-    status.innerHTML =
-      "Checking wallet...";
-
-
-    /*
-      Verify network.
-    */
 
     await requireTestnet();
 
 
-    /*
-      Request wallet account.
-    */
-
     const accounts =
       await getEthereum().request({
-
-        method:
-          "eth_requestAccounts"
-
+        method:"eth_requestAccounts"
       });
 
 
@@ -370,36 +336,23 @@ async function connectWallet(){
       accounts[0];
 
 
-    /*
-      Load HiveToken read-only.
-    */
-
     const token =
       new ethers.Contract(
-
         TOKEN,
-
         [
-
           "function owner() view returns(address)",
-
           "function isTaxExempt(address) view returns(bool)",
-
+          "function balanceOf(address) view returns(uint256)",
+          "function allowance(address,address) view returns(uint256)",
           "function pair() view returns(address)",
-
-          "function pairLocked() view returns(bool)",
-
-          "function balanceOf(address) view returns(uint256)"
-
+          "function pairLocked() view returns(bool)"
         ],
-
         getProvider()
-
       );
 
 
     /*
-      Verify this is NOT owner.
+      Must NOT be owner.
     */
 
     const owner =
@@ -412,14 +365,14 @@ async function connectWallet(){
     ){
 
       throw new Error(
-        "This is the HiveToken owner wallet. Switch to the second non-owner test wallet."
+        "This is the owner wallet. Use the same non-exempt wallet from the successful buy test."
       );
 
     }
 
 
     /*
-      Verify buyer is NOT tax exempt.
+      Must NOT be tax exempt.
     */
 
     const exempt =
@@ -431,7 +384,7 @@ async function connectWallet(){
     if(exempt){
 
       throw new Error(
-        "This wallet is tax exempt. Use the non-exempt test wallet."
+        "Seller wallet is tax exempt."
       );
 
     }
@@ -445,102 +398,113 @@ async function connectWallet(){
       await token.pair();
 
 
-    const pairLocked =
+    const locked =
       await token.pairLocked();
 
 
     if(
-      !pairLocked
-    ){
-
-      throw new Error(
-        "HiveToken pair is not locked."
-      );
-
-    }
-
-
-    if(
+      !locked ||
       configuredPair.toLowerCase() !==
       PAIR.toLowerCase()
     ){
 
       throw new Error(
-        "HiveToken pair does not match the expected V4 pair."
+        "V4 pair verification failed."
       );
 
     }
 
 
     /*
-      Verify pair contains contract code.
+      Verify seller balance.
     */
 
-    const pairCode =
-      await getProvider().getCode(
-        PAIR
-      );
-
-
-    if(
-      !pairCode ||
-      pairCode === "0x"
-    ){
-
-      throw new Error(
-        "No contract code found at V4 pair address."
-      );
-
-    }
-
-
-    /*
-      Verify buyer has enough tBNB.
-    */
-
-    const bnbBalance =
-      await getProvider().getBalance(
-        account
-      );
-
-
-    if(
-      bnbBalance.lte(
-        BUY_AMOUNT
-      )
-    ){
-
-      throw new Error(
-        "Buyer needs more than 0.001 tBNB for the test buy plus gas."
-      );
-
-    }
-
-
-    /*
-      Display current buyer HIVE balance.
-    */
-
-    const hiveBalance =
+    const sellerBalance =
       await token.balanceOf(
         account
       );
 
 
-    buyButton.disabled =
-      false;
+    if(
+      sellerBalance.lt(
+        SELL_AMOUNT
+      )
+    ){
+
+      throw new Error(
+        "Seller does not have 100 HIVE."
+      );
+
+    }
+
+
+    /*
+      Critical threshold check.
+
+      Automatic swap happens BEFORE the
+      current sell tax is collected.
+
+      Therefore the contract must currently
+      be below 100 HIVE.
+    */
+
+    const taxBalance =
+      await token.balanceOf(
+        TOKEN
+      );
+
+
+    if(
+      taxBalance.gte(
+        SWAP_THRESHOLD
+      )
+    ){
+
+      throw new Error(
+        "HiveToken already holds 100+ HIVE. Stop — automatic funding could trigger on this sell."
+      );
+
+    }
+
+
+    /*
+      Check allowance.
+    */
+
+    const allowance =
+      await token.allowance(
+        account,
+        ROUTER
+      );
+
+
+    if(
+      allowance.gte(
+        SELL_AMOUNT
+      )
+    ){
+
+      sellButton.disabled =
+        false;
+
+    }else{
+
+      approveButton.disabled =
+        false;
+
+    }
 
 
     status.innerHTML = `
 
       <span class="good">
-      BUYER READY ✅
+      SELLER READY ✅
       </span>
 
       <br><br>
 
       <strong>
-      Buyer:
+      Seller:
       </strong>
 
       <br><br>
@@ -549,77 +513,83 @@ async function connectWallet(){
 
       <br><br>
 
-      Non-owner:
-
-      <br>
-
-      <span class="good">
-      VERIFIED ✅
-      </span>
+      <strong>
+      Seller HIVE balance:
+      </strong>
 
       <br><br>
-
-      Tax exempt:
-
-      <br>
-
-      false
-
-      <br>
-
-      <span class="good">
-      VERIFIED ✅
-      </span>
-
-      <br><br>
-
-      V4 pair:
-
-      <br>
-
-      ${configuredPair}
-
-      <br>
-
-      <span class="good">
-      VERIFIED ✅
-      </span>
-
-      <br><br>
-
-      Current HIVE balance:
-
-      <br>
 
       ${ethers.utils.formatUnits(
-        hiveBalance,
+        sellerBalance,
         18
       )} HIVE
 
       <br><br>
 
       <strong>
-      Ready for the 0.001 tBNB buy.
+      Current HiveToken tax balance:
       </strong>
+
+      <br><br>
+
+      ${ethers.utils.formatUnits(
+        taxBalance,
+        18
+      )} HIVE
+
+      <br><br>
+
+      Non-owner:
+
+      <span class="good">
+      PASS ✅
+      </span>
+
+      <br>
+
+      Non-exempt:
+
+      <span class="good">
+      PASS ✅
+      </span>
+
+      <br>
+
+      Below swap threshold:
+
+      <span class="good">
+      PASS ✅
+      </span>
+
+      <br><br>
+
+      ${
+        allowance.gte(SELL_AMOUNT)
+        ?
+        "<strong>Approval already sufficient. Press button 3.</strong>"
+        :
+        "<strong>Press button 2 to approve 100 HIVE.</strong>"
+      }
 
     `;
 
 
   }catch(error){
 
-
     account =
       null;
 
+    approveButton.disabled =
+      true;
 
-    buyButton.disabled =
+    sellButton.disabled =
       true;
 
 
     status.innerHTML = `
 
       <span class="bad">
-      BUYER CHECK FAILED ❌
+      SELLER CHECK FAILED ❌
       </span>
 
       <br><br>
@@ -633,28 +603,29 @@ async function connectWallet(){
 }
 
 
-
 /* =========================================================
-   RUN BUY TAX TEST
+   APPROVE
    ========================================================= */
 
-
-async function runBuyTest(){
+async function approveHive(){
 
   const status =
     document.getElementById(
       "status"
     );
 
-
-  const buyButton =
+  const approveButton =
     document.getElementById(
-      "buyButton"
+      "approveButton"
+    );
+
+  const sellButton =
+    document.getElementById(
+      "sellButton"
     );
 
 
   try{
-
 
     await requireTestnet();
 
@@ -662,41 +633,186 @@ async function runBuyTest(){
     if(!account){
 
       throw new Error(
-        "Connect the buyer wallet first."
+        "Connect seller wallet first."
       );
 
     }
 
 
-    buyButton.disabled =
+    approveButton.disabled =
       true;
 
 
-    /*
-      Token read contract.
-    */
+    const token =
+      new ethers.Contract(
+        TOKEN,
+        [
+          "function approve(address,uint256) returns(bool)",
+          "function allowance(address,address) view returns(uint256)"
+        ],
+        getSigner()
+      );
+
+
+    status.innerHTML = `
+
+      <span class="warning">
+      APPROVAL
+      </span>
+
+      <br><br>
+
+      Your wallet will ask you to approve:
+
+      <br><br>
+
+      <strong>
+      100 HIVE
+      </strong>
+
+      <br><br>
+
+      for the PancakeSwap Testnet Router.
+
+    `;
+
+
+    const tx =
+      await token.approve(
+        ROUTER,
+        SELL_AMOUNT
+      );
+
+
+    status.innerHTML = `
+
+      Approval sent ✅
+
+      <br><br>
+
+      ${tx.hash}
+
+      <br><br>
+
+      Waiting for confirmation...
+
+    `;
+
+
+    await tx.wait();
+
+
+    const allowance =
+      await token.allowance(
+        account,
+        ROUTER
+      );
+
+
+    if(
+      allowance.lt(
+        SELL_AMOUNT
+      )
+    ){
+
+      throw new Error(
+        "Approval confirmed but allowance is below 100 HIVE."
+      );
+
+    }
+
+
+    sellButton.disabled =
+      false;
+
+
+    status.innerHTML = `
+
+      <span class="good">
+      100 HIVE APPROVED ✅
+      </span>
+
+      <br><br>
+
+      <strong>
+      Press button 3 to run the sell-tax test.
+      </strong>
+
+    `;
+
+
+  }catch(error){
+
+    approveButton.disabled =
+      false;
+
+
+    status.innerHTML = `
+
+      <span class="bad">
+      APPROVAL FAILED ❌
+      </span>
+
+      <br><br>
+
+      ${error.message}
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   SELL TEST
+   ========================================================= */
+
+async function runSellTest(){
+
+  const status =
+    document.getElementById(
+      "status"
+    );
+
+  const sellButton =
+    document.getElementById(
+      "sellButton"
+    );
+
+
+  try{
+
+    await requireTestnet();
+
+
+    if(!account){
+
+      throw new Error(
+        "Connect seller wallet first."
+      );
+
+    }
+
+
+    sellButton.disabled =
+      true;
+
 
     const token =
       new ethers.Contract(
-
         TOKEN,
-
         [
-
           "function balanceOf(address) view returns(uint256)",
-
-          "function isTaxExempt(address) view returns(bool)"
-
+          "function isTaxExempt(address) view returns(bool)",
+          "function allowance(address,address) view returns(uint256)"
         ],
-
         getProvider()
-
       );
 
 
     /*
-      Recheck buyer exemption immediately
-      before transaction.
+      Final safety checks.
     */
 
     const exempt =
@@ -708,17 +824,37 @@ async function runBuyTest(){
     if(exempt){
 
       throw new Error(
-        "Buyer became tax exempt. Stop test."
+        "Seller is tax exempt. Stop."
+      );
+
+    }
+
+
+    const allowance =
+      await token.allowance(
+        account,
+        ROUTER
+      );
+
+
+    if(
+      allowance.lt(
+        SELL_AMOUNT
+      )
+    ){
+
+      throw new Error(
+        "Router allowance is below 100 HIVE."
       );
 
     }
 
 
     /*
-      Record balances BEFORE buy.
+      Record balances BEFORE sell.
     */
 
-    const buyerBefore =
+    const sellerBefore =
       await token.balanceOf(
         account
       );
@@ -737,29 +873,50 @@ async function runBuyTest(){
 
 
     /*
-      Router contract.
+      Prevent this isolated sell-tax test
+      from accidentally triggering the
+      automatic funding mechanism.
+    */
+
+    if(
+      taxBefore.gte(
+        SWAP_THRESHOLD
+      )
+    ){
+
+      throw new Error(
+        "Tax balance is already at or above 100 HIVE. Sell cancelled."
+      );
+
+    }
+
+
+    /*
+      100 HIVE sell should add 2.5 HIVE.
+
+      Make sure this transaction itself
+      cannot begin with threshold reached.
+    */
+
+    const expectedTax =
+      SELL_AMOUNT
+        .mul(250)
+        .div(10000);
+
+
+    /*
+      Router.
     */
 
     const router =
       new ethers.Contract(
-
         ROUTER,
-
         [
-
-          "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin,address[] calldata path,address to,uint256 deadline) payable"
-
+          "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256 amountIn,uint256 amountOutMin,address[] calldata path,address to,uint256 deadline)"
         ],
-
         getSigner()
-
       );
 
-
-    /*
-      Deadline = current block time
-      + 20 minutes.
-    */
 
     const block =
       await getProvider().getBlock(
@@ -768,34 +925,30 @@ async function runBuyTest(){
 
 
     const deadline =
-      block.timestamp +
-      1200;
+      block.timestamp + 1200;
 
 
     const path =
       [
-
-        WBNB,
-
-        TOKEN
-
+        TOKEN,
+        WBNB
       ];
 
 
     status.innerHTML = `
 
       <span class="warning">
-      BUY TAX TEST
+      SELL TAX TEST
       </span>
 
       <br><br>
 
-      Your wallet will ask you to swap:
+      Your wallet will sell:
 
       <br><br>
 
       <strong>
-      0.001 tBNB
+      100 HIVE
       </strong>
 
       <br>
@@ -804,8 +957,16 @@ async function runBuyTest(){
 
       <br>
 
+      tBNB
+
+      <br><br>
+
+      Expected tax:
+
+      <br>
+
       <strong>
-      HIVE
+      2.5 HIVE
       </strong>
 
       <br><br>
@@ -815,44 +976,22 @@ async function runBuyTest(){
     `;
 
 
-    /*
-      Perform buy.
-
-      amountOutMin = 0 for this controlled
-      testnet functional test.
-    */
-
     const tx =
       await router
-        .swapExactETHForTokensSupportingFeeOnTransferTokens(
-
+        .swapExactTokensForETHSupportingFeeOnTransferTokens(
+          SELL_AMOUNT,
           0,
-
           path,
-
           account,
-
-          deadline,
-
-          {
-
-            value:
-              BUY_AMOUNT
-
-          }
-
+          deadline
         );
 
 
     status.innerHTML = `
 
       <span class="good">
-      BUY SENT ✅
+      SELL SENT ✅
       </span>
-
-      <br><br>
-
-      Transaction:
 
       <br><br>
 
@@ -869,10 +1008,10 @@ async function runBuyTest(){
 
 
     /*
-      Read balances AFTER transaction.
+      Balances AFTER sell.
     */
 
-    const buyerAfter =
+    const sellerAfter =
       await token.balanceOf(
         account
       );
@@ -891,12 +1030,12 @@ async function runBuyTest(){
 
 
     /*
-      Calculate actual movements.
+      Calculate exact movements.
     */
 
-    const buyerReceived =
-      buyerAfter.sub(
-        buyerBefore
+    const sellerSpent =
+      sellerBefore.sub(
+        sellerAfter
       );
 
 
@@ -906,27 +1045,25 @@ async function runBuyTest(){
       );
 
 
-    const grossPairSent =
-      pairBefore.sub(
-        pairAfter
+    const pairReceived =
+      pairAfter.sub(
+        pairBefore
+      );
+
+
+    const expectedPairReceived =
+      SELL_AMOUNT.sub(
+        expectedTax
       );
 
 
     /*
-      Exact contract formula:
-
-      amount * 250 / 10000
+      Exact checks.
     */
 
-    const expectedTax =
-      grossPairSent
-        .mul(250)
-        .div(10000);
-
-
-    const expectedBuyer =
-      grossPairSent.sub(
-        expectedTax
+    const sellerPass =
+      sellerSpent.eq(
+        SELL_AMOUNT
       );
 
 
@@ -936,85 +1073,54 @@ async function runBuyTest(){
       );
 
 
-    const buyerPass =
-      buyerReceived.eq(
-        expectedBuyer
+    const pairPass =
+      pairReceived.eq(
+        expectedPairReceived
       );
 
 
-    /*
-      Calculate displayed percentage.
-    */
-
-    let displayedPercent =
-      "0";
-
-
     if(
-      !grossPairSent.eq(0)
-    ){
-
-      const scaledPercent =
-        taxCollected
-          .mul(1000000)
-          .div(grossPairSent);
-
-
-      displayedPercent =
-        (
-          Number(
-            scaledPercent.toString()
-          ) / 10000
-        ).toFixed(4);
-
-    }
-
-
-    /*
-      PASS
-    */
-
-    if(
+      sellerPass &&
       taxPass &&
-      buyerPass
+      pairPass
     ){
 
       status.innerHTML = `
 
         <span class="good">
-        V4 BUY TAX PASSED ✅
+        V4 SELL TAX PASSED ✅
         </span>
 
         <br><br>
 
         <strong>
-        Gross HIVE sent by pair:
+        Seller spent:
         </strong>
 
         <br><br>
 
         ${ethers.utils.formatUnits(
-          grossPairSent,
+          sellerSpent,
           18
         )} HIVE
 
         <br><br>
 
         <strong>
-        Buyer received:
+        Pair received:
         </strong>
 
         <br><br>
 
         ${ethers.utils.formatUnits(
-          buyerReceived,
+          pairReceived,
           18
         )} HIVE
 
         <br><br>
 
         <strong>
-        HIVE tax collected:
+        Sell tax collected:
         </strong>
 
         <br><br>
@@ -1040,17 +1146,20 @@ async function runBuyTest(){
         <br><br>
 
         <strong>
-        Measured tax rate:
+        HiveToken total tax balance now:
         </strong>
 
         <br><br>
 
-        ${displayedPercent}%
+        ${ethers.utils.formatUnits(
+          taxAfter,
+          18
+        )} HIVE
 
         <br><br>
 
         <span class="good">
-        EXACT 2.5% BUY TAX VERIFIED ✅
+        EXACT 2.5% SELL TAX VERIFIED ✅
         </span>
 
         <br><br>
@@ -1061,51 +1170,50 @@ async function runBuyTest(){
 
         <br><br>
 
-        Do not sell yet.
+        Do not make another sell yet.
 
         <br><br>
 
-        Send me a screenshot of this result.
+        Send me a screenshot.
 
       `;
 
 
     }else{
 
-
       status.innerHTML = `
 
         <span class="bad">
-        BUY TAX CHECK FAILED ❌
+        SELL TAX CHECK FAILED ❌
         </span>
 
         <br><br>
 
-        Gross HIVE sent by pair:
+        Seller spent:
 
-        <br><br>
+        <br>
 
         ${ethers.utils.formatUnits(
-          grossPairSent,
+          sellerSpent,
           18
         )} HIVE
 
         <br><br>
 
-        Buyer received:
+        Pair received:
 
-        <br><br>
+        <br>
 
         ${ethers.utils.formatUnits(
-          buyerReceived,
+          pairReceived,
           18
         )} HIVE
 
         <br><br>
 
-        Actual tax collected:
+        Tax collected:
 
-        <br><br>
+        <br>
 
         ${ethers.utils.formatUnits(
           taxCollected,
@@ -1116,7 +1224,7 @@ async function runBuyTest(){
 
         Expected tax:
 
-        <br><br>
+        <br>
 
         ${ethers.utils.formatUnits(
           expectedTax,
@@ -1136,15 +1244,14 @@ async function runBuyTest(){
 
   }catch(error){
 
-
-    buyButton.disabled =
+    sellButton.disabled =
       false;
 
 
     status.innerHTML = `
 
       <span class="bad">
-      BUY TEST FAILED ❌
+      SELL TEST FAILED ❌
       </span>
 
       <br><br>
@@ -1158,11 +1265,9 @@ async function runBuyTest(){
 }
 
 
-
 /* =========================================================
    WALLET CHANGES
    ========================================================= */
-
 
 if(
   typeof window.ethereum !==
@@ -1170,36 +1275,23 @@ if(
 ){
 
   window.ethereum.on(
-
     "accountsChanged",
-
     function(){
-
       location.reload();
-
     }
-
   );
 
 
   window.ethereum.on(
-
     "chainChanged",
-
     function(){
-
       location.reload();
-
     }
-
   );
 
 }
 
-
 </script>
 
-
 </body>
-
 </html>
