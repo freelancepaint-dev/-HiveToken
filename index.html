@@ -2,16 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BnBeeHive Receive Test</title>
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>HiveToken V4 Test Receiver</title>
 
 <style>
+
 body{
   background:#0b0f0b;
   color:white;
   font-family:Arial,sans-serif;
   padding:20px;
 }
+
 .card{
   max-width:650px;
   margin:auto;
@@ -20,7 +27,11 @@ body{
   border-radius:18px;
   padding:22px;
 }
-h1{color:#ffd45c;}
+
+h1{
+  color:#ffd45c;
+}
+
 .box{
   background:#050705;
   padding:16px;
@@ -29,6 +40,7 @@ h1{color:#ffd45c;}
   overflow-wrap:anywhere;
   line-height:1.6;
 }
+
 button{
   width:100%;
   padding:18px;
@@ -40,8 +52,26 @@ button{
   font-size:18px;
   font-weight:bold;
 }
-.good{color:#55ef7a;font-weight:bold;}
-.bad{color:#ff5c5c;font-weight:bold;}
+
+button:disabled{
+  opacity:0.5;
+}
+
+.good{
+  color:#55ef7a;
+  font-weight:bold;
+}
+
+.bad{
+  color:#ff5c5c;
+  font-weight:bold;
+}
+
+.warning{
+  color:#ffd45c;
+  font-weight:bold;
+}
+
 </style>
 </head>
 
@@ -49,194 +79,504 @@ button{
 
 <div class="card">
 
-<h1>BnBeeHive BNB Receive Test</h1>
+<h1>🐝 HiveToken V4 Test Receiver</h1>
 
 <div class="box">
-<strong>Mainnet BnBeeHive</strong><br>
-0x9dE16778D63953B3F778128B1D5cA0c88B797c72
+
+<strong>TESTNET ONLY</strong>
+
+<br><br>
+
+This deploys the temporary
+TestHiveReceiver contract used to test
+HiveToken V4.
+
+<br><br>
+
+It does NOT modify or interact with the
+live BnBeeHive mainnet contract.
+
 </div>
+
 
 <div class="box">
-<strong>READ-ONLY TEST</strong><br><br>
-No transaction will be sent.<br>
-No wallet signature is required.<br>
-No BNB will leave your wallet.
+
+<strong>Required Network</strong>
+
+<br><br>
+
+BNB Smart Chain Testnet
+
+<br>
+
+Chain ID: 97
+
 </div>
 
-<button onclick="runTest()">
-Run BNB Receive Simulation
+
+<button onclick="connectWallet()">
+Connect Wallet
 </button>
 
-<div id="result" class="box">
+
+<button
+  id="deployButton"
+  onclick="deployReceiver()"
+  disabled
+>
+Deploy Test Hive Receiver
+</button>
+
+
+<div
+  id="status"
+  class="box"
+>
 Ready.
 </div>
 
+
 </div>
+
+
+<!--
+Generated automatically by GitHub Actions.
+Contains TEST_HIVE_RECEIVER_BYTECODE.
+-->
+<script src="test-hive-receiver-bytecode.js"></script>
+
 
 <script>
 
-const RPC =
-"https://bsc-dataseed.bnbchain.org";
+let account = null;
 
-const HIVE =
-"0x9dE16778D63953B3F778128B1D5cA0c88B797c72";
 
-/*
-Arbitrary funded-looking sender used only
-for eth_estimateGas simulation.
+/* =========================================================
+   WALLET
+   ========================================================= */
 
-No private key exists in this page and
-nothing can be broadcast.
-*/
-const FROM =
-"0x0000000000000000000000000000000000000001";
+function getProvider(){
 
-async function rpc(method, params){
-
-  const response = await fetch(RPC,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({
-      jsonrpc:"2.0",
-      id:1,
-      method:method,
-      params:params
-    })
-  });
-
-  const json = await response.json();
-
-  if(json.error){
-    throw new Error(
-      json.error.message ||
-      JSON.stringify(json.error)
-    );
+  if(
+    typeof window.ethereum !== "undefined"
+  ){
+    return window.ethereum;
   }
 
-  return json.result;
+  throw new Error(
+    "Wallet provider not found. Open this page inside your wallet browser."
+  );
 }
 
 
-async function runTest(){
+/* =========================================================
+   CHAIN CHECK
+   ========================================================= */
 
-  const result =
-    document.getElementById("result");
+async function requireTestnet(){
 
-  result.innerHTML =
-    "Running simulation...";
+  const provider =
+    getProvider();
+
+  const chainId =
+    await provider.request({
+      method:"eth_chainId"
+    });
+
+
+  /*
+    BSC Testnet:
+
+    decimal 97
+    hex 0x61
+  */
+
+  if(
+    chainId.toLowerCase() !== "0x61"
+  ){
+
+    throw new Error(
+      "Wrong network. Switch your wallet to BNB Smart Chain Testnet (Chain ID 97)."
+    );
+  }
+
+
+  return chainId;
+}
+
+
+/* =========================================================
+   CONNECT
+   ========================================================= */
+
+async function connectWallet(){
+
+  const status =
+    document.getElementById("status");
+
+  const deployButton =
+    document.getElementById(
+      "deployButton"
+    );
+
 
   try{
 
-    /*
-      First verify that this really is
-      BSC Mainnet.
-    */
+    status.innerHTML =
+      "Connecting...";
 
-    const chainId =
-      await rpc("eth_chainId",[]);
 
-    if(chainId.toLowerCase() !== "0x38"){
+    const provider =
+      getProvider();
+
+
+    await requireTestnet();
+
+
+    const accounts =
+      await provider.request({
+        method:"eth_requestAccounts"
+      });
+
+
+    if(
+      !accounts ||
+      accounts.length === 0
+    ){
       throw new Error(
-        "RPC is not BSC Mainnet. Chain ID: " +
-        chainId
+        "No wallet account returned."
       );
     }
 
 
-    /*
-      Make sure the destination actually
-      contains contract bytecode.
-    */
-
-    const code =
-      await rpc(
-        "eth_getCode",
-        [HIVE,"latest"]
-      );
-
-    if(!code || code === "0x"){
-      throw new Error(
-        "No contract bytecode found at BnBeeHive address."
-      );
-    }
+    account =
+      accounts[0];
 
 
-    /*
-      Simulate an EMPTY-CALLDATA BNB transfer.
-
-      value = 1 wei.
-
-      This is the same receiving mechanism
-      HiveToken uses:
-
-      hiveAddress.call{value: bnbReceived}("")
-
-      eth_estimateGas executes the call for
-      simulation but DOES NOT broadcast it.
-    */
-
-    const gas =
-      await rpc(
-        "eth_estimateGas",
-        [{
-          from:FROM,
-          to:HIVE,
-          value:"0x1",
-          data:"0x"
-        }]
-      );
-
-
-    result.innerHTML = `
+    status.innerHTML = `
       <span class="good">
-      PASS ✅
+      Connected ✅
       </span>
 
       <br><br>
 
-      BnBeeHive accepted the simulated
-      plain-BNB call.
+      BSC Testnet
 
       <br><br>
 
-      Estimated gas:<br>
-      ${gas}
+      Wallet:
+
+      <br>
+
+      ${account}
+    `;
+
+
+    deployButton.disabled =
+      false;
+
+
+  }catch(error){
+
+    account =
+      null;
+
+
+    deployButton.disabled =
+      true;
+
+
+    status.innerHTML = `
+      <span class="bad">
+      Connection failed ❌
+      </span>
+
+      <br><br>
+
+      ${error.message}
+    `;
+  }
+}
+
+
+/* =========================================================
+   DEPLOY TEST RECEIVER
+   ========================================================= */
+
+async function deployReceiver(){
+
+  const status =
+    document.getElementById("status");
+
+  const deployButton =
+    document.getElementById(
+      "deployButton"
+    );
+
+
+  try{
+
+    if(!account){
+
+      throw new Error(
+        "Connect wallet first."
+      );
+    }
+
+
+    await requireTestnet();
+
+
+    /*
+      Make sure the generated bytecode
+      file loaded correctly.
+    */
+
+    if(
+      typeof window.TEST_HIVE_RECEIVER_BYTECODE
+        !== "string" ||
+      !window.TEST_HIVE_RECEIVER_BYTECODE
+        .startsWith("0x") ||
+      window.TEST_HIVE_RECEIVER_BYTECODE
+        .length < 10
+    ){
+
+      throw new Error(
+        "Test receiver bytecode was not loaded."
+      );
+    }
+
+
+    deployButton.disabled =
+      true;
+
+
+    status.innerHTML = `
+      <span class="warning">
+      Waiting for wallet...
+      </span>
+
+      <br><br>
+
+      Review and approve the TESTNET
+      contract deployment in your wallet.
+
+      <br><br>
+
+      Do not approve if your wallet shows
+      BSC Mainnet.
+    `;
+
+
+    /*
+      Contract deployment:
+
+      No "to" address is supplied.
+
+      data = TestHiveReceiver creation
+      bytecode generated by GitHub Actions.
+
+      value = 0.
+    */
+
+    const txHash =
+      await getProvider().request({
+
+        method:
+          "eth_sendTransaction",
+
+        params:[
+          {
+            from:
+              account,
+
+            data:
+              window.TEST_HIVE_RECEIVER_BYTECODE,
+
+            value:
+              "0x0"
+          }
+        ]
+
+      });
+
+
+    status.innerHTML = `
+      <span class="good">
+      Deployment sent ✅
+      </span>
+
+      <br><br>
+
+      Transaction:
+
+      <br>
+
+      ${txHash}
+
+      <br><br>
+
+      Waiting for confirmation...
+    `;
+
+
+    /*
+      Wait for receipt.
+    */
+
+    let receipt =
+      null;
+
+
+    while(!receipt){
+
+      await new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            2500
+          )
+      );
+
+
+      receipt =
+        await getProvider().request({
+
+          method:
+            "eth_getTransactionReceipt",
+
+          params:[
+            txHash
+          ]
+
+        });
+
+    }
+
+
+    /*
+      Check transaction status.
+    */
+
+    if(
+      receipt.status &&
+      receipt.status.toLowerCase()
+        !== "0x1"
+    ){
+
+      throw new Error(
+        "Deployment transaction reverted."
+      );
+    }
+
+
+    if(
+      !receipt.contractAddress
+    ){
+
+      throw new Error(
+        "Deployment confirmed but no contract address was returned."
+      );
+    }
+
+
+    status.innerHTML = `
+      <span class="good">
+      TEST RECEIVER DEPLOYED ✅
+      </span>
 
       <br><br>
 
       <strong>
-      No transaction was broadcast.
+      Contract Address:
       </strong>
+
+      <br><br>
+
+      ${receipt.contractAddress}
+
+      <br><br>
+
+      <strong>
+      Transaction:
+      </strong>
+
+      <br><br>
+
+      ${txHash}
+
+      <br><br>
+
+      Save this contract address.
+
+      <br><br>
+
+      We will use it as the Hive funding
+      address when deploying HiveToken V4
+      on BSC Testnet.
     `;
 
 
   }catch(error){
 
-    result.innerHTML = `
+    deployButton.disabled =
+      false;
+
+
+    status.innerHTML = `
       <span class="bad">
-      FAIL / REVERT ❌
+      Deployment failed ❌
       </span>
 
       <br><br>
 
-      The plain-BNB simulation did not
-      succeed.
-
-      <br><br>
-
       ${error.message}
-
-      <br><br>
-
-      <strong>
-      Do NOT proceed to mainnet HiveToken
-      deployment based on the current
-      funding method.
-      </strong>
     `;
   }
+}
+
+
+/* =========================================================
+   WALLET CHANGES
+   ========================================================= */
+
+if(
+  typeof window.ethereum !== "undefined"
+){
+
+  window.ethereum.on(
+    "accountsChanged",
+    function(){
+      account = null;
+
+      document.getElementById(
+        "deployButton"
+      ).disabled = true;
+
+      document.getElementById(
+        "status"
+      ).innerHTML =
+        "Wallet changed. Connect again.";
+    }
+  );
+
+
+  window.ethereum.on(
+    "chainChanged",
+    function(){
+      account = null;
+
+      document.getElementById(
+        "deployButton"
+      ).disabled = true;
+
+      document.getElementById(
+        "status"
+      ).innerHTML =
+        "Network changed. Connect again.";
+    }
+  );
+
 }
 
 </script>
