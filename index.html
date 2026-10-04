@@ -2,11 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>HiveToken V4 Pair Setup</title>
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>HiveToken V4 Liquidity</title>
 
 <style>
+
 body{
   background:#0b0f0b;
   color:white;
@@ -66,6 +71,7 @@ button:disabled{
   color:#ffd45c;
   font-weight:bold;
 }
+
 </style>
 </head>
 
@@ -73,7 +79,8 @@ button:disabled{
 
 <div class="card">
 
-<h1>🐝 HiveToken V4 Pair Setup</h1>
+<h1>🐝 HiveToken V4 Liquidity Test</h1>
+
 
 <div class="box">
 
@@ -89,19 +96,34 @@ HiveToken V4:
 
 <br><br>
 
-WBNB:
+V4 HIVE/WBNB Pair:
 
 <br>
 
-0xae13d989dac2f0debff460ac112a837c89baa7cd
+0x3f8016dea6df1323fe2bee493b15593a8a2b149e
+
+</div>
+
+
+<div class="box">
+
+<strong>Test Liquidity</strong>
 
 <br><br>
 
-PancakeSwap V2 Factory:
+10,000 HIVE
 
 <br>
 
-0x6725f303b657a9451d8ba641348b6761a6cc7a17
++
+
+<br>
+
+0.01 tBNB
+
+<br><br>
+
+This is testnet only.
 
 </div>
 
@@ -112,20 +134,20 @@ PancakeSwap V2 Factory:
 
 
 <button
-  id="createButton"
-  onclick="createOrFindPair()"
+  id="approveButton"
+  onclick="approveHive()"
   disabled
 >
-2. Create / Find V4 HIVE-WBNB Pair
+2. Approve 10,000 HIVE
 </button>
 
 
 <button
-  id="setButton"
-  onclick="setPair()"
+  id="liquidityButton"
+  onclick="addLiquidity()"
   disabled
 >
-3. Permanently Set Pair in HiveToken
+3. Add Test Liquidity
 </button>
 
 
@@ -135,6 +157,7 @@ PancakeSwap V2 Factory:
 >
 Ready.
 </div>
+
 
 </div>
 
@@ -153,25 +176,35 @@ src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js">
 const TOKEN =
 "0x305cecf060209f758b74dbef91758021f113c608";
 
+const PAIR =
+"0x3f8016dea6df1323fe2bee493b15593a8a2b149e";
+
+const ROUTER =
+"0xd99d1c33f9fc3444f8101754abc46c52416550d1";
+
 const WBNB =
 "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
-const FACTORY =
-"0x6725f303b657a9451d8ba641348b6761a6cc7a17";
 
-const ZERO =
-"0x0000000000000000000000000000000000000000";
+const HIVE_AMOUNT =
+ethers.utils.parseUnits(
+  "10000",
+  18
+);
+
+
+const BNB_AMOUNT =
+ethers.utils.parseEther(
+  "0.01"
+);
 
 
 let account =
   null;
 
-let pairAddress =
-  null;
-
 
 /* =========================================================
-   WALLET PROVIDER
+   WALLET
    ========================================================= */
 
 function getEthereum(){
@@ -190,8 +223,22 @@ function getEthereum(){
 }
 
 
+function getProvider(){
+
+  return new ethers.providers.Web3Provider(
+    getEthereum()
+  );
+}
+
+
+function getSigner(){
+
+  return getProvider().getSigner();
+}
+
+
 /* =========================================================
-   VERIFY BSC TESTNET
+   NETWORK
    ========================================================= */
 
 async function requireTestnet(){
@@ -215,23 +262,7 @@ async function requireTestnet(){
 
 
 /* =========================================================
-   ETHERS SIGNER
-   ========================================================= */
-
-function getSigner(){
-
-  const provider =
-    new ethers.providers.Web3Provider(
-      getEthereum()
-    );
-
-
-  return provider.getSigner();
-}
-
-
-/* =========================================================
-   CONNECT WALLET
+   CONNECT
    ========================================================= */
 
 async function connectWallet(){
@@ -270,7 +301,8 @@ async function connectWallet(){
 
 
     /*
-      Verify connected wallet owns V4.
+      Verify token configuration before
+      allowing liquidity.
     */
 
     const token =
@@ -279,7 +311,10 @@ async function connectWallet(){
         [
           "function owner() view returns(address)",
           "function pair() view returns(address)",
-          "function pairLocked() view returns(bool)"
+          "function pairLocked() view returns(bool)",
+          "function isTaxExempt(address) view returns(bool)",
+          "function balanceOf(address) view returns(uint256)",
+          "function allowance(address,address) view returns(uint256)"
         ],
         getSigner()
       );
@@ -287,14 +322,6 @@ async function connectWallet(){
 
     const owner =
       await token.owner();
-
-
-    const currentPair =
-      await token.pair();
-
-
-    const locked =
-      await token.pairLocked();
 
 
     if(
@@ -308,231 +335,139 @@ async function connectWallet(){
     }
 
 
-    /*
-      If pair is already locked,
-      stop immediately.
-    */
-
-    if(locked){
-
-      status.innerHTML = `
-        <span class="good">
-        PAIR ALREADY CONFIGURED ✅
-        </span>
-
-        <br><br>
-
-        Pair:
-
-        <br><br>
-
-        ${currentPair}
-
-        <br><br>
-
-        No additional pair setup
-        transaction is needed.
-      `;
+    const configuredPair =
+      await token.pair();
 
 
-      document.getElementById(
-        "createButton"
-      ).disabled =
-        true;
+    const pairLocked =
+      await token.pairLocked();
 
-
-      document.getElementById(
-        "setButton"
-      ).disabled =
-        true;
-
-
-      return;
-    }
-
-
-    document.getElementById(
-      "createButton"
-    ).disabled =
-      false;
-
-
-    status.innerHTML = `
-      <span class="good">
-      OWNER CONNECTED ✅
-      </span>
-
-      <br><br>
-
-      ${account}
-
-      <br><br>
-
-      BSC Testnet confirmed.
-
-      <br><br>
-
-      HiveToken pair is currently unset.
-
-      <br><br>
-
-      <strong>
-      Press button 2.
-      </strong>
-    `;
-
-
-  }catch(error){
-
-    document.getElementById(
-      "createButton"
-    ).disabled =
-      true;
-
-
-    document.getElementById(
-      "setButton"
-    ).disabled =
-      true;
-
-
-    status.innerHTML = `
-      <span class="bad">
-      CONNECTION FAILED ❌
-      </span>
-
-      <br><br>
-
-      ${error.message}
-    `;
-  }
-
-}
-
-
-/* =========================================================
-   CREATE OR FIND PAIR
-   ========================================================= */
-
-async function createOrFindPair(){
-
-  const status =
-    document.getElementById(
-      "status"
-    );
-
-
-  const createButton =
-    document.getElementById(
-      "createButton"
-    );
-
-
-  try{
-
-    await requireTestnet();
-
-
-    if(!account){
-
-      throw new Error(
-        "Connect wallet first."
-      );
-    }
-
-
-    createButton.disabled =
-      true;
-
-
-    const factory =
-      new ethers.Contract(
-        FACTORY,
-        [
-          "function getPair(address,address) view returns(address)",
-          "function createPair(address,address) returns(address)"
-        ],
-        getSigner()
-      );
-
-
-    /*
-      First ask the factory if the
-      V4 HIVE/WBNB pair already exists.
-    */
-
-    let existing =
-      await factory.getPair(
-        TOKEN,
-        WBNB
-      );
-
-
-    /*
-      Existing pair found.
-    */
 
     if(
-      existing.toLowerCase() !==
-      ZERO.toLowerCase()
+      configuredPair.toLowerCase() !==
+      PAIR.toLowerCase() ||
+      !pairLocked
     ){
 
-      pairAddress =
-        existing;
+      throw new Error(
+        "HiveToken V4 pair configuration does not match expected pair."
+      );
+    }
+
+
+    const exempt =
+      await token.isTaxExempt(
+        account
+      );
+
+
+    if(!exempt){
+
+      throw new Error(
+        "Owner wallet is not tax exempt. Stop before adding liquidity."
+      );
+    }
+
+
+    const hiveBalance =
+      await token.balanceOf(
+        account
+      );
+
+
+    if(
+      hiveBalance.lt(
+        HIVE_AMOUNT
+      )
+    ){
+
+      throw new Error(
+        "Wallet does not have 10,000 HIVE."
+      );
+    }
+
+
+    const bnbBalance =
+      await getProvider().getBalance(
+        account
+      );
+
+
+    if(
+      bnbBalance.lte(
+        BNB_AMOUNT
+      )
+    ){
+
+      throw new Error(
+        "Wallet needs more than 0.01 tBNB to cover liquidity plus gas."
+      );
+    }
+
+
+    const allowance =
+      await token.allowance(
+        account,
+        ROUTER
+      );
+
+
+    if(
+      allowance.gte(
+        HIVE_AMOUNT
+      )
+    ){
+
+      document.getElementById(
+        "approveButton"
+      ).disabled =
+        true;
 
 
       document.getElementById(
-        "setButton"
+        "liquidityButton"
       ).disabled =
         false;
 
 
       status.innerHTML = `
         <span class="good">
-        V4 PAIR FOUND ✅
+        READY FOR LIQUIDITY ✅
         </span>
 
         <br><br>
 
-        <strong>
-        Pair Address:
-        </strong>
-
-        <br><br>
-
-        ${pairAddress}
-
-        <br><br>
-
-        This address was returned directly
-        by the PancakeSwap V2 factory for:
-
-        <br><br>
-
-        HiveToken V4
+        Owner verified.
 
         <br>
 
-        +
+        Pair verified and locked.
 
         <br>
 
-        WBNB
+        Owner tax exemption verified.
+
+        <br>
+
+        HIVE balance verified.
+
+        <br>
+
+        tBNB balance verified.
+
+        <br>
+
+        Router allowance already sufficient.
 
         <br><br>
+
+        Press:
+
+        <br>
 
         <strong>
-        STOP HERE.
+        3. Add Test Liquidity
         </strong>
-
-        <br><br>
-
-        Do not press button 3 yet.
-
-        <br><br>
-
-        Send me a screenshot of this
-        pair address first.
       `;
 
 
@@ -540,144 +475,51 @@ async function createOrFindPair(){
     }
 
 
-    /*
-      No pair exists yet.
-      Ask wallet to create it.
-    */
-
-    status.innerHTML = `
-      <span class="warning">
-      NO V4 PAIR EXISTS YET
-      </span>
-
-      <br><br>
-
-      Your wallet will ask you to approve
-      creation of the V4 HIVE-WBNB pair.
-
-      <br><br>
-
-      Network must be:
-
-      <br>
-
-      <strong>
-      BNB Smart Chain Testnet
-      </strong>
-    `;
-
-
-    const tx =
-      await factory.createPair(
-        TOKEN,
-        WBNB
-      );
-
-
-    status.innerHTML = `
-      <span class="good">
-      PAIR CREATION SENT ✅
-      </span>
-
-      <br><br>
-
-      Transaction:
-
-      <br><br>
-
-      ${tx.hash}
-
-      <br><br>
-
-      Waiting for confirmation...
-    `;
-
-
-    await tx.wait();
-
-
-    /*
-      After confirmation, retrieve the
-      canonical pair directly from factory.
-    */
-
-    existing =
-      await factory.getPair(
-        TOKEN,
-        WBNB
-      );
-
-
-    if(
-      existing.toLowerCase() ===
-      ZERO.toLowerCase()
-    ){
-
-      throw new Error(
-        "Pair creation confirmed but factory still returned zero address."
-      );
-    }
-
-
-    pairAddress =
-      existing;
-
-
     document.getElementById(
-      "setButton"
+      "approveButton"
     ).disabled =
       false;
 
 
     status.innerHTML = `
       <span class="good">
-      V4 HIVE-WBNB PAIR CREATED ✅
+      WALLET VERIFIED ✅
       </span>
 
       <br><br>
 
+      Owner verified.
+
+      <br>
+
+      Pair verified and locked.
+
+      <br>
+
+      Owner tax exemption verified.
+
+      <br>
+
+      HIVE balance verified.
+
+      <br>
+
+      tBNB balance verified.
+
+      <br><br>
+
       <strong>
-      Pair Address:
+      Press button 2 to approve
+      10,000 HIVE.
       </strong>
-
-      <br><br>
-
-      ${pairAddress}
-
-      <br><br>
-
-      Factory:
-
-      <br><br>
-
-      ${FACTORY}
-
-      <br><br>
-
-      <strong>
-      STOP HERE.
-      </strong>
-
-      <br><br>
-
-      Do NOT press button 3 yet.
-
-      <br><br>
-
-      Send me a screenshot of this
-      pair address first.
     `;
 
 
   }catch(error){
 
-    createButton.disabled =
-      false;
-
-
     status.innerHTML = `
       <span class="bad">
-      PAIR CREATION FAILED ❌
+      CHECK FAILED ❌
       </span>
 
       <br><br>
@@ -690,10 +532,10 @@ async function createOrFindPair(){
 
 
 /* =========================================================
-   PERMANENTLY SET PAIR
+   APPROVE HIVE
    ========================================================= */
 
-async function setPair(){
+async function approveHive(){
 
   const status =
     document.getElementById(
@@ -701,9 +543,9 @@ async function setPair(){
     );
 
 
-  const setButton =
+  const approveButton =
     document.getElementById(
-      "setButton"
+      "approveButton"
     );
 
 
@@ -720,129 +562,59 @@ async function setPair(){
     }
 
 
-    if(!pairAddress){
+    approveButton.disabled =
+      true;
 
-      throw new Error(
-        "No verified pair address loaded."
-      );
-    }
-
-
-    /*
-      Recheck the factory immediately
-      before permanent configuration.
-    */
-
-    const factory =
-      new ethers.Contract(
-        FACTORY,
-        [
-          "function getPair(address,address) view returns(address)"
-        ],
-        getSigner()
-      );
-
-
-    const verifiedPair =
-      await factory.getPair(
-        TOKEN,
-        WBNB
-      );
-
-
-    if(
-      verifiedPair.toLowerCase() !==
-      pairAddress.toLowerCase()
-    ){
-
-      throw new Error(
-        "Factory verification failed. Pair will NOT be locked."
-      );
-    }
-
-
-    /*
-      Recheck token state.
-    */
 
     const token =
       new ethers.Contract(
         TOKEN,
         [
-          "function owner() view returns(address)",
-          "function setPair(address)",
-          "function pair() view returns(address)",
-          "function pairLocked() view returns(bool)"
+          "function approve(address,uint256) returns(bool)",
+          "function allowance(address,address) view returns(uint256)"
         ],
         getSigner()
       );
 
 
-    const owner =
-      await token.owner();
-
-
-    if(
-      owner.toLowerCase() !==
-      account.toLowerCase()
-    ){
-
-      throw new Error(
-        "Connected wallet is not the HiveToken owner."
-      );
-    }
-
-
-    const alreadyLocked =
-      await token.pairLocked();
-
-
-    if(alreadyLocked){
-
-      throw new Error(
-        "HiveToken pair is already locked."
-      );
-    }
-
-
-    setButton.disabled =
-      true;
-
-
     status.innerHTML = `
       <span class="warning">
-      PERMANENT PAIR CONFIGURATION
+      APPROVAL REQUIRED
       </span>
 
       <br><br>
 
-      Factory verified pair:
-
-      <br><br>
-
-      ${verifiedPair}
-
-      <br><br>
-
-      Your wallet will request approval
-      for HiveToken.setPair().
+      Your wallet will ask you to approve:
 
       <br><br>
 
       <strong>
-      This setting cannot be changed later.
+      10,000 HIVE
       </strong>
+
+      <br><br>
+
+      Spender:
+
+      <br>
+
+      PancakeSwap Testnet Router
+
+      <br><br>
+
+      ${ROUTER}
     `;
 
 
     const tx =
-      await token.setPair(
-        verifiedPair
+      await token.approve(
+        ROUTER,
+        HIVE_AMOUNT
       );
 
 
     status.innerHTML = `
-      Pair configuration sent ✅
+      Approval sent ✅
 
       <br><br>
 
@@ -857,11 +629,124 @@ async function setPair(){
     await tx.wait();
 
 
+    const allowance =
+      await token.allowance(
+        account,
+        ROUTER
+      );
+
+
+    if(
+      allowance.lt(
+        HIVE_AMOUNT
+      )
+    ){
+
+      throw new Error(
+        "Approval confirmed but allowance is below 10,000 HIVE."
+      );
+    }
+
+
+    document.getElementById(
+      "liquidityButton"
+    ).disabled =
+      false;
+
+
+    status.innerHTML = `
+      <span class="good">
+      10,000 HIVE APPROVED ✅
+      </span>
+
+      <br><br>
+
+      Router allowance verified.
+
+      <br><br>
+
+      <strong>
+      Next press:
+
+      <br><br>
+
+      3. Add Test Liquidity
+      </strong>
+    `;
+
+
+  }catch(error){
+
+    approveButton.disabled =
+      false;
+
+
+    status.innerHTML = `
+      <span class="bad">
+      APPROVAL FAILED ❌
+      </span>
+
+      <br><br>
+
+      ${error.message}
+    `;
+  }
+
+}
+
+
+/* =========================================================
+   ADD LIQUIDITY
+   ========================================================= */
+
+async function addLiquidity(){
+
+  const status =
+    document.getElementById(
+      "status"
+    );
+
+
+  const liquidityButton =
+    document.getElementById(
+      "liquidityButton"
+    );
+
+
+  try{
+
+    await requireTestnet();
+
+
+    if(!account){
+
+      throw new Error(
+        "Connect wallet first."
+      );
+    }
+
+
+    liquidityButton.disabled =
+      true;
+
+
     /*
-      Verify permanent state.
+      Verify pair one final time.
     */
 
-    const savedPair =
+    const token =
+      new ethers.Contract(
+        TOKEN,
+        [
+          "function pair() view returns(address)",
+          "function pairLocked() view returns(bool)",
+          "function allowance(address,address) view returns(uint256)"
+        ],
+        getSigner()
+      );
+
+
+    const configuredPair =
       await token.pair();
 
 
@@ -871,64 +756,295 @@ async function setPair(){
 
     if(
       !locked ||
-      savedPair.toLowerCase() !==
-      verifiedPair.toLowerCase()
+      configuredPair.toLowerCase() !==
+      PAIR.toLowerCase()
     ){
 
       throw new Error(
-        "Post-transaction pair verification failed."
+        "Pair verification failed."
+      );
+    }
+
+
+    const allowance =
+      await token.allowance(
+        account,
+        ROUTER
+      );
+
+
+    if(
+      allowance.lt(
+        HIVE_AMOUNT
+      )
+    ){
+
+      throw new Error(
+        "Router allowance is below 10,000 HIVE."
+      );
+    }
+
+
+    /*
+      Router addLiquidityETH.
+
+      amountTokenMin and amountETHMin are
+      set equal to desired amounts because
+      this is the first liquidity for the
+      new empty pair.
+
+      LP tokens go directly to owner wallet.
+    */
+
+    const router =
+      new ethers.Contract(
+        ROUTER,
+        [
+          "function addLiquidityETH(address token,uint256 amountTokenDesired,uint256 amountTokenMin,uint256 amountETHMin,address to,uint256 deadline) payable returns(uint256 amountToken,uint256 amountETH,uint256 liquidity)"
+        ],
+        getSigner()
+      );
+
+
+    const block =
+      await getProvider().getBlock(
+        "latest"
+      );
+
+
+    const deadline =
+      block.timestamp + 1200;
+
+
+    status.innerHTML = `
+      <span class="warning">
+      ADDING TEST LIQUIDITY
+      </span>
+
+      <br><br>
+
+      Your wallet will ask you to approve:
+
+      <br><br>
+
+      <strong>
+      10,000 HIVE
+      </strong>
+
+      <br>
+
+      +
+
+      <br>
+
+      <strong>
+      0.01 tBNB
+      </strong>
+
+      <br><br>
+
+      LP tokens will be sent to:
+
+      <br><br>
+
+      ${account}
+
+      <br><br>
+
+      TESTNET ONLY.
+    `;
+
+
+    const tx =
+      await router.addLiquidityETH(
+        TOKEN,
+        HIVE_AMOUNT,
+        HIVE_AMOUNT,
+        BNB_AMOUNT,
+        account,
+        deadline,
+        {
+          value:
+            BNB_AMOUNT
+        }
+      );
+
+
+    status.innerHTML = `
+      <span class="good">
+      LIQUIDITY TRANSACTION SENT ✅
+      </span>
+
+      <br><br>
+
+      ${tx.hash}
+
+      <br><br>
+
+      Waiting for confirmation...
+    `;
+
+
+    await tx.wait();
+
+
+    /*
+      Verify LP token balance.
+    */
+
+    const pair =
+      new ethers.Contract(
+        PAIR,
+        [
+          "function balanceOf(address) view returns(uint256)",
+          "function totalSupply() view returns(uint256)",
+          "function getReserves() view returns(uint112,uint112,uint32)",
+          "function token0() view returns(address)",
+          "function token1() view returns(address)"
+        ],
+        getProvider()
+      );
+
+
+    const lpBalance =
+      await pair.balanceOf(
+        account
+      );
+
+
+    const totalLP =
+      await pair.totalSupply();
+
+
+    const reserves =
+      await pair.getReserves();
+
+
+    const token0 =
+      await pair.token0();
+
+
+    const token1 =
+      await pair.token1();
+
+
+    if(
+      lpBalance.eq(0)
+    ){
+
+      throw new Error(
+        "Liquidity transaction confirmed but owner LP balance is zero."
+      );
+    }
+
+
+    if(
+      totalLP.eq(0)
+    ){
+
+      throw new Error(
+        "Pair total LP supply is zero."
       );
     }
 
 
     status.innerHTML = `
       <span class="good">
-      V4 PAIR CONFIGURED & LOCKED ✅
+      V4 TEST LIQUIDITY ADDED ✅
       </span>
 
       <br><br>
 
       <strong>
-      HIVE-WBNB Pair:
+      Pair:
       </strong>
 
       <br><br>
 
-      ${savedPair}
-
-      <br><br>
-
-      Pair Locked:
-
-      <br>
-
-      ${locked}
+      ${PAIR}
 
       <br><br>
 
       <strong>
-      STOP HERE.
+      LP Tokens Received:
       </strong>
 
       <br><br>
 
-      Do not add liquidity yet.
+      ${ethers.utils.formatUnits(
+        lpBalance,
+        18
+      )}
 
       <br><br>
 
-      Send me a screenshot.
+      <strong>
+      Pair Token 0:
+      </strong>
+
+      <br>
+
+      ${token0}
+
+      <br><br>
+
+      <strong>
+      Pair Token 1:
+      </strong>
+
+      <br>
+
+      ${token1}
+
+      <br><br>
+
+      <strong>
+      Reserve 0:
+      </strong>
+
+      <br>
+
+      ${reserves[0].toString()}
+
+      <br><br>
+
+      <strong>
+      Reserve 1:
+      </strong>
+
+      <br>
+
+      ${reserves[1].toString()}
+
+      <br><br>
+
+      <strong>
+      TEST LIQUIDITY VERIFIED ✅
+      </strong>
+
+      <br><br>
+
+      STOP HERE.
+
+      <br><br>
+
+      Do not perform a buy or sell yet.
+
+      <br><br>
+
+      Send me a screenshot of this result.
     `;
 
 
   }catch(error){
 
-    setButton.disabled =
+    liquidityButton.disabled =
       false;
 
 
     status.innerHTML = `
       <span class="bad">
-      SET PAIR FAILED ❌
+      LIQUIDITY FAILED ❌
       </span>
 
       <br><br>
@@ -941,7 +1057,7 @@ async function setPair(){
 
 
 /* =========================================================
-   WALLET / NETWORK CHANGES
+   WALLET CHANGES
    ========================================================= */
 
 if(
