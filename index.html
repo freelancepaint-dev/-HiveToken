@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiveToken V3 Tax Test</title>
+<title>HiveToken V3 Sell Tax Test</title>
 
 <style>
 body {
@@ -39,22 +39,11 @@ button {
   font-size:17px;
   font-weight:bold;
 }
-.connect {
-  background:#eee;
-  color:#111;
-}
-.buy {
-  background:#ffd45c;
-  color:#111;
-}
-.good {
-  color:#55ef7a;
-  font-weight:bold;
-}
-.bad {
-  color:#ff5c5c;
-  font-weight:bold;
-}
+.connect { background:#eee; color:#111; }
+.approve { background:#ffd45c; color:#111; }
+.sell { background:#ffb347; color:#111; }
+.good { color:#55ef7a; font-weight:bold; }
+.bad { color:#ff5c5c; font-weight:bold; }
 .label { color:#aaa; }
 </style>
 </head>
@@ -63,12 +52,17 @@ button {
 
 <div class="card">
 
-<h1>HiveToken V3 Tax Test</h1>
+<h1>HiveToken V3 Sell Tax Test</h1>
 
 <p>
-BSC Testnet only. This test buys exactly
-<strong>0.001 tBNB</strong> of HIVE.
+BSC Testnet only.
+This test sells exactly <strong>100 HIVE</strong>.
 </p>
+
+<div class="box">
+<span class="label">Required Wallet</span><br>
+0x77Dc64A638100407F756393dF33640d5cDf45619
+</div>
 
 <div class="box">
 <span class="label">HiveToken V3</span><br>
@@ -76,23 +70,23 @@ BSC Testnet only. This test buys exactly
 </div>
 
 <div class="box">
-<span class="label">HIVE Recipient — LOCKED</span><br>
-0x77Dc64A638100407F756393dF33640d5cDf45619
+<span class="label">Test Sell</span><br>
+100 HIVE
 <br><br>
-<span class="good">Confirmed non-tax-exempt ✅</span>
-</div>
-
-<div class="box">
-<span class="label">Test Amount</span><br>
-0.001 tBNB
+Expected tax:<br>
+<strong>2.5 HIVE</strong>
 </div>
 
 <button class="connect" onclick="connectWallet()">
-1. Connect + Confirm BSC Testnet
+1. Connect Test Wallet
 </button>
 
-<button class="buy" onclick="testBuy()">
-2. Test 0.001 tBNB Buy
+<button class="approve" onclick="approveHive()">
+2. Approve 100 HIVE
+</button>
+
+<button class="sell" onclick="sellHive()">
+3. Sell 100 HIVE
 </button>
 
 <div id="status" class="box">
@@ -103,34 +97,57 @@ Ready.
 
 <script>
 
+const HIVE =
+"0xf10f0091a7504761e5e0cab7a7de34df077871f8";
+
 const ROUTER =
 "0xD99D1c33F9fC3444f8101754aBC46c52416550D1";
 
 const WBNB =
 "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
-const HIVE =
-"0xf10f0091a7504761e5e0cab7a7de34df077871f8";
-
-const RECIPIENT =
+const REQUIRED_WALLET =
 "0x77Dc64A638100407F756393dF33640d5cDf45619";
 
 const CHAIN_ID = "0x61";
 
-const BUY_VALUE =
-"0x38d7ea4c68000"; // exactly 0.001 BNB
+const SELL_AMOUNT =
+100n * (10n ** 18n);
 
-let connectedAccount = null;
+let account = null;
 
 
-/* --------------------------------
+/* -----------------------------
+   HELPERS
+------------------------------ */
+
+function strip0x(v) {
+  return v.toLowerCase().replace("0x","");
+}
+
+function encodeUint(v) {
+  return BigInt(v)
+    .toString(16)
+    .padStart(64,"0");
+}
+
+function encodeAddress(v) {
+  return strip0x(v)
+    .padStart(64,"0");
+}
+
+function fail(message) {
+  document.getElementById("status").innerHTML =
+    "<span class='bad'>STOP</span><br><br>" +
+    message;
+}
+
+
+/* -----------------------------
    CONNECT
--------------------------------- */
+------------------------------ */
 
 async function connectWallet() {
-
-  const status =
-    document.getElementById("status");
 
   try {
 
@@ -145,7 +162,7 @@ async function connectWallet() {
         method:"eth_requestAccounts"
       });
 
-    connectedAccount = accounts[0];
+    account = accounts[0];
 
     let chain =
       await window.ethereum.request({
@@ -173,162 +190,196 @@ async function connectWallet() {
       );
     }
 
-    status.innerHTML = `
+    if (
+      account.toLowerCase() !==
+      REQUIRED_WALLET.toLowerCase()
+    ) {
+
+      throw new Error(
+        "Wrong wallet connected. Switch to 0x77Dc...45619."
+      );
+    }
+
+    document.getElementById("status").innerHTML = `
       <span class="good">
-      BSC Testnet confirmed ✅
+      Correct non-exempt wallet ✅
       </span>
 
       <br><br>
 
-      <span class="label">
-      Transaction-paying wallet
-      </span><br>
-
-      ${connectedAccount}
+      ${account}
 
       <br><br>
 
-      <span class="label">
-      HIVE will be sent to
-      </span><br>
-
-      ${RECIPIENT}
+      <span class="good">
+      BSC Testnet confirmed ✅
+      </span>
     `;
 
   } catch(error) {
-
-    status.innerHTML =
-      "<span class='bad'>ERROR</span><br>" +
-      error.message;
+    fail(error.message);
   }
 }
 
 
-/* --------------------------------
-   ABI HELPERS
--------------------------------- */
+/* -----------------------------
+   VERIFY BEFORE TX
+------------------------------ */
 
-function strip0x(value) {
-  return value.toLowerCase().replace("0x","");
+async function verify() {
+
+  if (!account)
+    throw new Error(
+      "Connect the wallet first."
+    );
+
+  const chain =
+    await window.ethereum.request({
+      method:"eth_chainId"
+    });
+
+  if (chain.toLowerCase() !== CHAIN_ID)
+    throw new Error(
+      "Wrong network. BSC Testnet required."
+    );
+
+  if (
+    account.toLowerCase() !==
+    REQUIRED_WALLET.toLowerCase()
+  )
+    throw new Error(
+      "Wrong wallet."
+    );
 }
 
-function encodeUint(value) {
 
-  return BigInt(value)
-    .toString(16)
-    .padStart(64,"0");
-}
+/* -----------------------------
+   APPROVE EXACTLY 100 HIVE
+------------------------------ */
 
-function encodeAddress(address) {
-
-  return strip0x(address)
-    .padStart(64,"0");
-}
-
-
-/* --------------------------------
-   BUY
--------------------------------- */
-
-async function testBuy() {
-
-  const status =
-    document.getElementById("status");
+async function approveHive() {
 
   try {
 
-    if (!window.ethereum) {
-      throw new Error("Wallet provider not found.");
-    }
+    await verify();
 
-    if (!connectedAccount) {
-      throw new Error(
-        "Tap Connect + Confirm BSC Testnet first."
-      );
-    }
+    /*
+      approve(address,uint256)
+      selector = 0x095ea7b3
+    */
 
-    const chain =
+    const data =
+      "0x095ea7b3" +
+      encodeAddress(ROUTER) +
+      encodeUint(SELL_AMOUNT);
+
+    const txHash =
       await window.ethereum.request({
-        method:"eth_chainId"
+
+        method:"eth_sendTransaction",
+
+        params:[{
+          from:account,
+          to:HIVE,
+          value:"0x0",
+          data:data
+        }]
       });
 
-    if (chain.toLowerCase() !== CHAIN_ID) {
-      throw new Error(
-        "STOP — wallet is not on BSC Testnet."
-      );
-    }
+    document.getElementById("status").innerHTML = `
+      <span class="good">
+      Approval submitted ✅
+      </span>
 
+      <br><br>
+
+      Approved exactly:
+      <strong>100 HIVE</strong>
+
+      <br><br>
+
+      Transaction Hash:<br>
+      ${txHash}
+
+      <br><br>
+
+      Wait for this approval to confirm
+      before tapping Sell.
+    `;
+
+  } catch(error) {
+    fail(error.message);
+  }
+}
+
+
+/* -----------------------------
+   SELL EXACTLY 100 HIVE
+------------------------------ */
+
+async function sellHive() {
+
+  try {
+
+    await verify();
 
     /*
-      PancakeSwap V2:
-
-      swapExactETHForTokensSupportingFeeOnTransferTokens(
-        uint amountOutMin,
+      swapExactTokensForETHSupportingFeeOnTransferTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
         address[] path,
         address to,
-        uint deadline
+        uint256 deadline
       )
 
-      selector:
-      0xb6f9de95
+      selector = 0x791ac947
     */
-
 
     const selector =
-      "b6f9de95";
+      "791ac947";
 
+    const amountIn =
+      encodeUint(SELL_AMOUNT);
 
     /*
-      ABI head:
-
-      amountOutMin = 0
-
-      path offset = 0x80
-      because the static head is 4 x 32 bytes
-
-      to = locked non-exempt recipient
-
-      deadline = now + 20 minutes
+      Static head contains 5 x 32 bytes.
+      Dynamic path therefore begins at
+      byte offset 160 = 0xA0.
     */
-
 
     const amountOutMin =
       encodeUint(0);
 
     const pathOffset =
-      encodeUint(128);
+      encodeUint(160);
+
+    /*
+      BNB from the sell goes back to
+      the connected test wallet.
+    */
 
     const recipient =
-      encodeAddress(RECIPIENT);
+      encodeAddress(account);
 
     const deadline =
       encodeUint(
         Math.floor(Date.now()/1000) + 1200
       );
 
-
-    /*
-      Dynamic path:
-
-      length = 2
-      path[0] = WBNB
-      path[1] = HIVE
-    */
-
-
     const pathLength =
       encodeUint(2);
 
     const path0 =
-      encodeAddress(WBNB);
+      encodeAddress(HIVE);
 
     const path1 =
-      encodeAddress(HIVE);
+      encodeAddress(WBNB);
 
 
     const data =
       "0x" +
       selector +
+      amountIn +
       amountOutMin +
       pathOffset +
       recipient +
@@ -338,64 +389,39 @@ async function testBuy() {
       path1;
 
 
-    status.innerHTML = `
-      <span class="good">
-      Ready to request wallet confirmation.
-      </span>
-
-      <br><br>
-
-      Amount: 0.001 tBNB
-
-      <br><br>
-
-      HIVE recipient:<br>
-      ${RECIPIENT}
-    `;
-
-
     const txHash =
       await window.ethereum.request({
 
         method:"eth_sendTransaction",
 
-        params:[
-          {
-            from:connectedAccount,
-            to:ROUTER,
-            value:BUY_VALUE,
-            data:data
-          }
-        ]
+        params:[{
+          from:account,
+          to:ROUTER,
+          value:"0x0",
+          data:data
+        }]
       });
 
 
-    status.innerHTML = `
+    document.getElementById("status").innerHTML = `
       <span class="good">
-      Transaction submitted ✅
+      100 HIVE sell submitted ✅
       </span>
 
       <br><br>
 
-      <span class="label">
-      Transaction Hash
-      </span><br>
-
+      Transaction Hash:<br>
       ${txHash}
 
       <br><br>
 
-      Wait for confirmation, then send me
-      the transaction hash or BscScan screenshot.
+      Send me the BscScan
+      BEP-20 Tokens Transferred screenshot.
     `;
 
 
   } catch(error) {
-
-    status.innerHTML =
-      "<span class='bad'>TRANSACTION NOT SUBMITTED</span>" +
-      "<br><br>" +
-      error.message;
+    fail(error.message);
   }
 }
 
