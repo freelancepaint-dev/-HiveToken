@@ -3,17 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiveToken V3 Sell Tax Test</title>
+<title>BnBeeHive Receive Test</title>
 
 <style>
-body {
+body{
   background:#0b0f0b;
-  color:#fff;
+  color:white;
   font-family:Arial,sans-serif;
-  margin:0;
   padding:20px;
 }
-.card {
+.card{
   max-width:650px;
   margin:auto;
   background:#151a15;
@@ -21,30 +20,28 @@ body {
   border-radius:18px;
   padding:22px;
 }
-h1 { color:#ffd45c; }
-.box {
+h1{color:#ffd45c;}
+.box{
   background:#050705;
-  padding:15px;
+  padding:16px;
   margin-top:15px;
   border-radius:12px;
   overflow-wrap:anywhere;
   line-height:1.6;
 }
-button {
+button{
   width:100%;
-  padding:17px;
-  margin-top:15px;
+  padding:18px;
+  margin-top:20px;
   border:0;
   border-radius:12px;
-  font-size:17px;
+  background:#ffd45c;
+  color:#111;
+  font-size:18px;
   font-weight:bold;
 }
-.connect { background:#eee; color:#111; }
-.approve { background:#ffd45c; color:#111; }
-.sell { background:#ffb347; color:#111; }
-.good { color:#55ef7a; font-weight:bold; }
-.bad { color:#ff5c5c; font-weight:bold; }
-.label { color:#aaa; }
+.good{color:#55ef7a;font-weight:bold;}
+.bad{color:#ff5c5c;font-weight:bold;}
 </style>
 </head>
 
@@ -52,44 +49,25 @@ button {
 
 <div class="card">
 
-<h1>HiveToken V3 Sell Tax Test</h1>
-
-<p>
-BSC Testnet only.
-This test sells exactly <strong>100 HIVE</strong>.
-</p>
+<h1>BnBeeHive BNB Receive Test</h1>
 
 <div class="box">
-<span class="label">Required Wallet</span><br>
-0x77Dc64A638100407F756393dF33640d5cDf45619
+<strong>Mainnet BnBeeHive</strong><br>
+0x9dE16778D63953B3F778128B1D5cA0c88B797c72
 </div>
 
 <div class="box">
-<span class="label">HiveToken V3</span><br>
-0xf10f0091a7504761e5e0cab7a7de34df077871f8
+<strong>READ-ONLY TEST</strong><br><br>
+No transaction will be sent.<br>
+No wallet signature is required.<br>
+No BNB will leave your wallet.
 </div>
 
-<div class="box">
-<span class="label">Test Sell</span><br>
-100 HIVE
-<br><br>
-Expected tax:<br>
-<strong>2.5 HIVE</strong>
-</div>
-
-<button class="connect" onclick="connectWallet()">
-1. Connect Test Wallet
+<button onclick="runTest()">
+Run BNB Receive Simulation
 </button>
 
-<button class="approve" onclick="approveHive()">
-2. Approve 100 HIVE
-</button>
-
-<button class="sell" onclick="sellHive()">
-3. Sell 100 HIVE
-</button>
-
-<div id="status" class="box">
+<div id="result" class="box">
 Ready.
 </div>
 
@@ -97,331 +75,167 @@ Ready.
 
 <script>
 
+const RPC =
+"https://bsc-dataseed.bnbchain.org";
+
 const HIVE =
-"0xf10f0091a7504761e5e0cab7a7de34df077871f8";
+"0x9dE16778D63953B3F778128B1D5cA0c88B797c72";
 
-const ROUTER =
-"0xD99D1c33F9fC3444f8101754aBC46c52416550D1";
+/*
+Arbitrary funded-looking sender used only
+for eth_estimateGas simulation.
 
-const WBNB =
-"0xae13d989dac2f0debff460ac112a837c89baa7cd";
+No private key exists in this page and
+nothing can be broadcast.
+*/
+const FROM =
+"0x0000000000000000000000000000000000000001";
 
-const REQUIRED_WALLET =
-"0x77Dc64A638100407F756393dF33640d5cDf45619";
+async function rpc(method, params){
 
-const CHAIN_ID = "0x61";
+  const response = await fetch(RPC,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      jsonrpc:"2.0",
+      id:1,
+      method:method,
+      params:params
+    })
+  });
 
-const SELL_AMOUNT =
-100n * (10n ** 18n);
+  const json = await response.json();
 
-let account = null;
-
-
-/* -----------------------------
-   HELPERS
------------------------------- */
-
-function strip0x(v) {
-  return v.toLowerCase().replace("0x","");
-}
-
-function encodeUint(v) {
-  return BigInt(v)
-    .toString(16)
-    .padStart(64,"0");
-}
-
-function encodeAddress(v) {
-  return strip0x(v)
-    .padStart(64,"0");
-}
-
-function fail(message) {
-  document.getElementById("status").innerHTML =
-    "<span class='bad'>STOP</span><br><br>" +
-    message;
-}
-
-
-/* -----------------------------
-   CONNECT
------------------------------- */
-
-async function connectWallet() {
-
-  try {
-
-    if (!window.ethereum) {
-      throw new Error(
-        "Open this page inside your wallet browser."
-      );
-    }
-
-    const accounts =
-      await window.ethereum.request({
-        method:"eth_requestAccounts"
-      });
-
-    account = accounts[0];
-
-    let chain =
-      await window.ethereum.request({
-        method:"eth_chainId"
-      });
-
-    if (chain.toLowerCase() !== CHAIN_ID) {
-
-      await window.ethereum.request({
-        method:"wallet_switchEthereumChain",
-        params:[
-          { chainId:CHAIN_ID }
-        ]
-      });
-
-      chain =
-        await window.ethereum.request({
-          method:"eth_chainId"
-        });
-    }
-
-    if (chain.toLowerCase() !== CHAIN_ID) {
-      throw new Error(
-        "Wallet is not on BSC Testnet."
-      );
-    }
-
-    if (
-      account.toLowerCase() !==
-      REQUIRED_WALLET.toLowerCase()
-    ) {
-
-      throw new Error(
-        "Wrong wallet connected. Switch to 0x77Dc...45619."
-      );
-    }
-
-    document.getElementById("status").innerHTML = `
-      <span class="good">
-      Correct non-exempt wallet ✅
-      </span>
-
-      <br><br>
-
-      ${account}
-
-      <br><br>
-
-      <span class="good">
-      BSC Testnet confirmed ✅
-      </span>
-    `;
-
-  } catch(error) {
-    fail(error.message);
+  if(json.error){
+    throw new Error(
+      json.error.message ||
+      JSON.stringify(json.error)
+    );
   }
+
+  return json.result;
 }
 
 
-/* -----------------------------
-   VERIFY BEFORE TX
------------------------------- */
+async function runTest(){
 
-async function verify() {
+  const result =
+    document.getElementById("result");
 
-  if (!account)
-    throw new Error(
-      "Connect the wallet first."
-    );
+  result.innerHTML =
+    "Running simulation...";
 
-  const chain =
-    await window.ethereum.request({
-      method:"eth_chainId"
-    });
-
-  if (chain.toLowerCase() !== CHAIN_ID)
-    throw new Error(
-      "Wrong network. BSC Testnet required."
-    );
-
-  if (
-    account.toLowerCase() !==
-    REQUIRED_WALLET.toLowerCase()
-  )
-    throw new Error(
-      "Wrong wallet."
-    );
-}
-
-
-/* -----------------------------
-   APPROVE EXACTLY 100 HIVE
------------------------------- */
-
-async function approveHive() {
-
-  try {
-
-    await verify();
+  try{
 
     /*
-      approve(address,uint256)
-      selector = 0x095ea7b3
+      First verify that this really is
+      BSC Mainnet.
     */
 
-    const data =
-      "0x095ea7b3" +
-      encodeAddress(ROUTER) +
-      encodeUint(SELL_AMOUNT);
+    const chainId =
+      await rpc("eth_chainId",[]);
 
-    const txHash =
-      await window.ethereum.request({
+    if(chainId.toLowerCase() !== "0x38"){
+      throw new Error(
+        "RPC is not BSC Mainnet. Chain ID: " +
+        chainId
+      );
+    }
 
-        method:"eth_sendTransaction",
 
-        params:[{
-          from:account,
+    /*
+      Make sure the destination actually
+      contains contract bytecode.
+    */
+
+    const code =
+      await rpc(
+        "eth_getCode",
+        [HIVE,"latest"]
+      );
+
+    if(!code || code === "0x"){
+      throw new Error(
+        "No contract bytecode found at BnBeeHive address."
+      );
+    }
+
+
+    /*
+      Simulate an EMPTY-CALLDATA BNB transfer.
+
+      value = 1 wei.
+
+      This is the same receiving mechanism
+      HiveToken uses:
+
+      hiveAddress.call{value: bnbReceived}("")
+
+      eth_estimateGas executes the call for
+      simulation but DOES NOT broadcast it.
+    */
+
+    const gas =
+      await rpc(
+        "eth_estimateGas",
+        [{
+          from:FROM,
           to:HIVE,
-          value:"0x0",
-          data:data
+          value:"0x1",
+          data:"0x"
         }]
-      });
-
-    document.getElementById("status").innerHTML = `
-      <span class="good">
-      Approval submitted ✅
-      </span>
-
-      <br><br>
-
-      Approved exactly:
-      <strong>100 HIVE</strong>
-
-      <br><br>
-
-      Transaction Hash:<br>
-      ${txHash}
-
-      <br><br>
-
-      Wait for this approval to confirm
-      before tapping Sell.
-    `;
-
-  } catch(error) {
-    fail(error.message);
-  }
-}
-
-
-/* -----------------------------
-   SELL EXACTLY 100 HIVE
------------------------------- */
-
-async function sellHive() {
-
-  try {
-
-    await verify();
-
-    /*
-      swapExactTokensForETHSupportingFeeOnTransferTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] path,
-        address to,
-        uint256 deadline
-      )
-
-      selector = 0x791ac947
-    */
-
-    const selector =
-      "791ac947";
-
-    const amountIn =
-      encodeUint(SELL_AMOUNT);
-
-    /*
-      Static head contains 5 x 32 bytes.
-      Dynamic path therefore begins at
-      byte offset 160 = 0xA0.
-    */
-
-    const amountOutMin =
-      encodeUint(0);
-
-    const pathOffset =
-      encodeUint(160);
-
-    /*
-      BNB from the sell goes back to
-      the connected test wallet.
-    */
-
-    const recipient =
-      encodeAddress(account);
-
-    const deadline =
-      encodeUint(
-        Math.floor(Date.now()/1000) + 1200
       );
 
-    const pathLength =
-      encodeUint(2);
 
-    const path0 =
-      encodeAddress(HIVE);
-
-    const path1 =
-      encodeAddress(WBNB);
-
-
-    const data =
-      "0x" +
-      selector +
-      amountIn +
-      amountOutMin +
-      pathOffset +
-      recipient +
-      deadline +
-      pathLength +
-      path0 +
-      path1;
-
-
-    const txHash =
-      await window.ethereum.request({
-
-        method:"eth_sendTransaction",
-
-        params:[{
-          from:account,
-          to:ROUTER,
-          value:"0x0",
-          data:data
-        }]
-      });
-
-
-    document.getElementById("status").innerHTML = `
+    result.innerHTML = `
       <span class="good">
-      100 HIVE sell submitted ✅
+      PASS ✅
       </span>
 
       <br><br>
 
-      Transaction Hash:<br>
-      ${txHash}
+      BnBeeHive accepted the simulated
+      plain-BNB call.
 
       <br><br>
 
-      Send me the BscScan
-      BEP-20 Tokens Transferred screenshot.
+      Estimated gas:<br>
+      ${gas}
+
+      <br><br>
+
+      <strong>
+      No transaction was broadcast.
+      </strong>
     `;
 
 
-  } catch(error) {
-    fail(error.message);
+  }catch(error){
+
+    result.innerHTML = `
+      <span class="bad">
+      FAIL / REVERT ❌
+      </span>
+
+      <br><br>
+
+      The plain-BNB simulation did not
+      succeed.
+
+      <br><br>
+
+      ${error.message}
+
+      <br><br>
+
+      <strong>
+      Do NOT proceed to mainnet HiveToken
+      deployment based on the current
+      funding method.
+      </strong>
+    `;
   }
 }
 
