@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-<title>HiveToken V4 Threshold Test</title>
+<title>HiveToken V4 Final Threshold Build</title>
 
 <style>
 body{
@@ -52,7 +52,7 @@ button:disabled{opacity:.45}
 
 <div class="card">
 
-<h1>🐝 HiveToken V4 Threshold Test</h1>
+<h1>🐝 HiveToken V4 Final Threshold Build</h1>
 
 <div class="box">
 
@@ -60,26 +60,40 @@ button:disabled{opacity:.45}
 
 <br><br>
 
-Current target:
+Current tax balance:
 
 <br>
 
-<strong>Build accumulated HIVE tax above 100 HIVE.</strong>
+<strong>
+86.842118564730504962 HIVE
+</strong>
 
 <br><br>
 
-This page performs a:
+Required:
 
 <br>
 
-<strong>0.004 tBNB → HIVE buy</strong>
+<strong>
+100 HIVE
+</strong>
 
 <br><br>
 
-A buy collects the 2.5% buy tax but does
-<strong>not</strong> trigger the automatic funding swap.
+This page performs exactly:
+
+<br>
+
+<strong>
+ONE 0.001 tBNB → HIVE buy
+</strong>
+
+<br><br>
+
+Then it stops.
 
 </div>
+
 
 <div class="box">
 
@@ -97,32 +111,28 @@ A buy collects the 2.5% buy tax but does
 
 0x3f8016dea6df1323fe2bee493b15593a8a2b149e
 
-<br><br>
-
-<strong>Current known tax balance before this test</strong>
-
-<br><br>
-
-25.185942898708856155 HIVE
-
 </div>
+
 
 <button onclick="connectWallet()">
 1. Connect Buyer Wallet
 </button>
 
+
 <button
 id="buyButton"
-onclick="buildThreshold()"
+onclick="finalBuy()"
 disabled>
-2. Buy HIVE With 0.004 tBNB
+2. Buy HIVE With 0.001 tBNB
 </button>
+
 
 <div id="status" class="box">
 Ready.
 </div>
 
 </div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
@@ -141,15 +151,17 @@ const WBNB =
 "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
 const BUY_AMOUNT =
-ethers.utils.parseEther("0.004");
+ethers.utils.parseEther("0.001");
 
 const THRESHOLD =
 ethers.utils.parseUnits("100",18);
 
 let account = null;
 
+let buyExecuted = false;
 
-function getEthereum(){
+
+function ethereumProvider(){
 
   if(
     typeof window.ethereum === "undefined" ||
@@ -167,7 +179,7 @@ function getEthereum(){
 function provider(){
 
   return new ethers.providers.Web3Provider(
-    getEthereum()
+    ethereumProvider()
   );
 }
 
@@ -181,14 +193,16 @@ function signer(){
 async function requireTestnet(){
 
   const chainId =
-    await getEthereum().request({
+    await ethereumProvider().request({
       method:"eth_chainId"
     });
 
   if(chainId.toLowerCase() !== "0x61"){
+
     throw new Error(
       "Wrong network. Use BNB Smart Chain Testnet."
     );
+
   }
 }
 
@@ -201,24 +215,33 @@ async function connectWallet(){
   const buyButton =
     document.getElementById("buyButton");
 
+
   try{
 
     buyButton.disabled = true;
 
     await requireTestnet();
 
+
     const accounts =
-      await getEthereum().request({
+      await ethereumProvider().request({
         method:"eth_requestAccounts"
       });
 
-    account = accounts[0];
 
-    if(!account){
+    if(
+      !accounts ||
+      accounts.length === 0
+    ){
       throw new Error(
         "No wallet account returned."
       );
     }
+
+
+    account =
+      accounts[0];
+
 
     const token =
       new ethers.Contract(
@@ -233,6 +256,7 @@ async function connectWallet(){
         ],
         provider()
       );
+
 
     const owner =
       await token.owner();
@@ -260,16 +284,20 @@ async function connectWallet(){
       account.toLowerCase() ===
       owner.toLowerCase()
     ){
+
       throw new Error(
-        "Use the same non-owner buyer wallet from the buy/sell tests."
+        "Use the same non-owner buyer wallet."
       );
+
     }
 
 
     if(exempt){
+
       throw new Error(
-        "This wallet is tax exempt."
+        "Buyer wallet is tax exempt."
       );
+
     }
 
 
@@ -278,18 +306,29 @@ async function connectWallet(){
       configuredPair.toLowerCase() !==
       PAIR.toLowerCase()
     ){
+
       throw new Error(
         "V4 pair verification failed."
       );
+
     }
 
 
     if(!threshold.eq(THRESHOLD)){
+
       throw new Error(
         "Unexpected swap threshold."
       );
+
     }
 
+
+    /*
+       IMPORTANT:
+
+       If threshold is already reached,
+       do not perform another buy.
+    */
 
     if(taxBalance.gte(THRESHOLD)){
 
@@ -301,7 +340,7 @@ async function connectWallet(){
 
       <br><br>
 
-      HiveToken currently holds:
+      HiveToken tax balance:
 
       <br><br>
 
@@ -314,11 +353,21 @@ async function connectWallet(){
 
       <br><br>
 
-      <strong>STOP HERE.</strong>
+      Required:
+
+      <br>
+
+      100 HIVE
 
       <br><br>
 
-      Do NOT press the buy button.
+      <strong>
+      STOP HERE.
+      </strong>
+
+      <br><br>
+
+      Do NOT make another buy or sell.
 
       <br><br>
 
@@ -331,9 +380,11 @@ async function connectWallet(){
 
 
     if(bnbBalance.lt(BUY_AMOUNT)){
+
       throw new Error(
-        "Buyer wallet does not have enough tBNB for the 0.004 tBNB test plus gas."
+        "Not enough tBNB for the 0.001 tBNB test plus gas."
       );
+
     }
 
 
@@ -343,12 +394,14 @@ async function connectWallet(){
     status.innerHTML = `
 
     <span class="good">
-    BUYER READY ✅
+    READY ✅
     </span>
 
     <br><br>
 
-    <strong>Buyer:</strong>
+    <strong>
+    Buyer:
+    </strong>
 
     <br><br>
 
@@ -370,38 +423,20 @@ async function connectWallet(){
     <br><br>
 
     <strong>
-    Swap threshold:
+    Amount needed:
     </strong>
 
     <br><br>
 
     ${ethers.utils.formatUnits(
-      threshold,
+      THRESHOLD.sub(taxBalance),
       18
     )} HIVE
 
     <br><br>
 
-    Non-owner:
-
     <span class="good">
-    PASS ✅
-    </span>
-
-    <br>
-
-    Non-exempt:
-
-    <span class="good">
-    PASS ✅
-    </span>
-
-    <br>
-
-    Pair locked:
-
-    <span class="good">
-    PASS ✅
+    SAFETY CHECKS PASSED ✅
     </span>
 
     <br><br>
@@ -414,7 +449,9 @@ async function connectWallet(){
   }catch(error){
 
     account = null;
+
     buyButton.disabled = true;
+
 
     status.innerHTML = `
 
@@ -429,11 +466,12 @@ async function connectWallet(){
     `;
 
   }
+
 }
 
 
 
-async function buildThreshold(){
+async function finalBuy(){
 
   const status =
     document.getElementById("status");
@@ -441,15 +479,35 @@ async function buildThreshold(){
   const buyButton =
     document.getElementById("buyButton");
 
+
   try{
+
+    if(buyExecuted){
+
+      throw new Error(
+        "Buy already executed."
+      );
+
+    }
+
 
     await requireTestnet();
 
+
     if(!account){
+
       throw new Error(
         "Connect buyer wallet first."
       );
+
     }
+
+
+    /*
+       Disable permanently before transaction.
+    */
+
+    buyExecuted = true;
 
     buyButton.disabled = true;
 
@@ -469,9 +527,11 @@ async function buildThreshold(){
 
 
     if(beforeTax.gte(THRESHOLD)){
+
       throw new Error(
-        "Threshold already reached. No buy needed."
+        "Threshold already reached. No transaction needed."
       );
+
     }
 
 
@@ -479,7 +539,7 @@ async function buildThreshold(){
       new ethers.Contract(
         ROUTER,
         [
-          "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin,address[] calldata path,address to,uint256 deadline) payable"
+          "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256,address[],address,uint256) payable"
         ],
         signer()
       );
@@ -488,6 +548,7 @@ async function buildThreshold(){
     const block =
       await provider().getBlock("latest");
 
+
     const deadline =
       block.timestamp + 1200;
 
@@ -495,7 +556,7 @@ async function buildThreshold(){
     status.innerHTML = `
 
     <span class="warning">
-    THRESHOLD BUILD BUY
+    FINAL THRESHOLD BUY
     </span>
 
     <br><br>
@@ -504,11 +565,9 @@ async function buildThreshold(){
 
     <br><br>
 
-    <strong>0.004 tBNB</strong>
-
-    <br><br>
-
-    to buy HIVE.
+    <strong>
+    0.001 tBNB
+    </strong>
 
     <br><br>
 
@@ -521,7 +580,10 @@ async function buildThreshold(){
       await router
       .swapExactETHForTokensSupportingFeeOnTransferTokens(
         0,
-        [WBNB,TOKEN],
+        [
+          WBNB,
+          TOKEN
+        ],
         account,
         deadline,
         {
@@ -552,7 +614,7 @@ async function buildThreshold(){
       await token.balanceOf(TOKEN);
 
 
-    const taxAdded =
+    const added =
       afterTax.sub(beforeTax);
 
 
@@ -561,7 +623,7 @@ async function buildThreshold(){
       status.innerHTML = `
 
       <span class="good">
-      V4 SWAP THRESHOLD REACHED ✅
+      V4 TAX THRESHOLD REACHED ✅
       </span>
 
       <br><br>
@@ -580,20 +642,20 @@ async function buildThreshold(){
       <br><br>
 
       <strong>
-      Tax added by this buy:
+      Tax added:
       </strong>
 
       <br><br>
 
       ${ethers.utils.formatUnits(
-        taxAdded,
+        added,
         18
       )} HIVE
 
       <br><br>
 
       <strong>
-      HiveToken tax balance now:
+      Tax balance now:
       </strong>
 
       <br><br>
@@ -606,7 +668,7 @@ async function buildThreshold(){
       <br><br>
 
       <strong>
-      Required threshold:
+      Threshold:
       </strong>
 
       <br><br>
@@ -616,16 +678,23 @@ async function buildThreshold(){
       <br><br>
 
       <span class="good">
-      READY FOR V4 FUNDING TRIGGER TEST ✅
+      READY FOR AUTOMATIC HIVE FUNDING TEST ✅
       </span>
 
       <br><br>
 
-      <strong>STOP HERE.</strong>
+      <strong>
+      STOP HERE.
+      </strong>
 
       <br><br>
 
-      Do NOT make another sell.
+      DO NOT SELL.
+
+      <br><br>
+
+      The next sell will attempt the automatic
+      HIVE → tBNB → Test Hive Receiver funding path.
 
       <br><br>
 
@@ -633,12 +702,13 @@ async function buildThreshold(){
 
       `;
 
+
     }else{
 
       status.innerHTML = `
 
       <span class="warning">
-      THRESHOLD NOT REACHED YET
+      STILL BELOW THRESHOLD
       </span>
 
       <br><br>
@@ -659,13 +729,13 @@ async function buildThreshold(){
       <br><br>
 
       ${ethers.utils.formatUnits(
-        taxAdded,
+        added,
         18
       )} HIVE
 
       <br><br>
 
-      Current tax balance:
+      Tax balance now:
 
       <br><br>
 
@@ -676,16 +746,17 @@ async function buildThreshold(){
 
       <br><br>
 
-      <strong>STOP HERE.</strong>
+      <strong>
+      STOP HERE.
+      </strong>
 
       <br><br>
 
-      Do not repeat the buy yet.
+      Do not repeat the buy.
 
       <br><br>
 
-      Send me a screenshot and I'll calculate
-      the next controlled amount.
+      Send me a screenshot.
 
       `;
 
@@ -694,12 +765,19 @@ async function buildThreshold(){
 
   }catch(error){
 
-    buyButton.disabled = false;
+    /*
+       Keep button disabled after any attempted
+       transaction so the user cannot accidentally
+       submit it twice.
+    */
+
+    buyButton.disabled = true;
+
 
     status.innerHTML = `
 
     <span class="bad">
-    THRESHOLD TEST FAILED ❌
+    FINAL BUY FAILED ❌
     </span>
 
     <br><br>
@@ -708,7 +786,9 @@ async function buildThreshold(){
 
     <br><br>
 
-    <strong>STOP HERE.</strong>
+    <strong>
+    STOP HERE.
+    </strong>
 
     `;
 
@@ -725,6 +805,7 @@ if(typeof window.ethereum !== "undefined"){
       location.reload();
     }
   );
+
 
   window.ethereum.on(
     "chainChanged",
