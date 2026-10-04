@@ -2,23 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
->
-
-<title>Deploy HiveToken V4</title>
+<title>HiveToken V4 Verification</title>
 
 <style>
-
 body{
   background:#0b0f0b;
   color:white;
   font-family:Arial,sans-serif;
   padding:20px;
 }
-
 .card{
   max-width:650px;
   margin:auto;
@@ -27,20 +21,15 @@ body{
   border-radius:18px;
   padding:22px;
 }
-
-h1{
-  color:#ffd45c;
-}
-
+h1{color:#ffd45c;}
 .box{
   background:#050705;
   padding:16px;
   margin-top:15px;
   border-radius:12px;
   overflow-wrap:anywhere;
-  line-height:1.6;
+  line-height:1.7;
 }
-
 button{
   width:100%;
   padding:18px;
@@ -52,26 +41,14 @@ button{
   font-size:18px;
   font-weight:bold;
 }
-
-button:disabled{
-  opacity:0.5;
-}
-
 .good{
   color:#55ef7a;
   font-weight:bold;
 }
-
 .bad{
   color:#ff5c5c;
   font-weight:bold;
 }
-
-.warning{
-  color:#ffd45c;
-  font-weight:bold;
-}
-
 </style>
 </head>
 
@@ -79,577 +56,554 @@ button:disabled{
 
 <div class="card">
 
-<h1>🐝 Deploy HiveToken V4</h1>
+<h1>🐝 HiveToken V4 Verification</h1>
 
 <div class="box">
-
-<strong>TESTNET ONLY</strong>
-
-<br><br>
-
-Network:<br>
-BNB Smart Chain Testnet
-
-<br><br>
-
-Chain ID:<br>
-97
-
+<strong>READ ONLY</strong><br><br>
+No transaction.<br>
+No signature.<br>
+No gas.<br>
+No BNB will leave your wallet.
 </div>
-
 
 <div class="box">
-
-<strong>PancakeSwap Testnet Router</strong>
-
-<br><br>
-
-0xD99D1c33F9fC3444f8101754aBC46c52416550D1
-
+<strong>HiveToken V4</strong><br><br>
+0x305cecf060209f758b74dbef91758021f113c608
 </div>
 
-
-<div class="box">
-
-<strong>V4 Test Hive Receiver</strong>
-
-<br><br>
-
-0xd22d8d7a8a3a3a7293168b5c83413060fd11ece1
-
-</div>
-
-
-<button onclick="connectWallet()">
-Connect Wallet
+<button onclick="verify()">
+Verify HiveToken V4
 </button>
 
-
-<button
-  id="deployButton"
-  onclick="deployHiveToken()"
-  disabled
->
-Deploy HiveToken V4
-</button>
-
-
-<div
-  id="status"
-  class="box"
->
+<div id="results" class="box">
 Ready.
 </div>
 
 </div>
 
 
-<!-- HiveToken V4 creation bytecode -->
-<script src="hive-bytecode.js"></script>
-
-
-<!-- ethers used only to encode constructor arguments -->
-<script
-  src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js">
-</script>
-
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
 <script>
 
 /* =========================================================
-   CONFIGURATION
+   CONFIG
    ========================================================= */
 
-const ROUTER =
-  "0xD99D1c33F9fC3444f8101754aBC46c52416550D1";
+const TOKEN =
+"0x305cecf060209f758b74dbef91758021f113c608";
 
-const HIVE_RECEIVER =
-  "0xd22d8d7a8a3a3a7293168b5c83413060fd11ece1";
+const EXPECTED_ROUTER =
+"0xD99D1c33F9fC3444f8101754aBC46c52416550D1";
 
-let account =
-  null;
+const EXPECTED_HIVE =
+"0xd22d8d7a8a3a3a7293168b5c83413060fd11ece1";
+
+const RPC =
+"https://bsc-testnet-rpc.publicnode.com";
 
 
 /* =========================================================
-   WALLET PROVIDER
+   ABI
    ========================================================= */
 
-function getProvider(){
+const ABI = [
 
-  if(
-    typeof window.ethereum !== "undefined"
-  ){
-    return window.ethereum;
-  }
+  "function name() view returns (string)",
 
-  throw new Error(
-    "Wallet provider not found. Open this page inside your wallet browser."
-  );
-}
+  "function symbol() view returns (string)",
+
+  "function decimals() view returns (uint8)",
+
+  "function totalSupply() view returns (uint256)",
+
+  "function owner() view returns (address)",
+
+  "function hiveAddress() view returns (address)",
+
+  "function router() view returns (address)",
+
+  "function pair() view returns (address)",
+
+  "function pairLocked() view returns (bool)",
+
+  "function BUY_TAX() view returns (uint256)",
+
+  "function SELL_TAX() view returns (uint256)",
+
+  "function TAX_DENOMINATOR() view returns (uint256)",
+
+  "function swapThreshold() view returns (uint256)",
+
+  "function isTaxExempt(address) view returns (bool)",
+
+  "function balanceOf(address) view returns (uint256)"
+];
 
 
 /* =========================================================
-   VERIFY BSC TESTNET
+   DISPLAY HELPER
    ========================================================= */
 
-async function requireTestnet(){
-
-  const chainId =
-    await getProvider().request({
-      method:"eth_chainId"
-    });
-
-
-  if(
-    chainId.toLowerCase() !== "0x61"
-  ){
-
-    throw new Error(
-      "Wrong network. Switch to BNB Smart Chain Testnet (Chain ID 97)."
-    );
-  }
-
-
-  return chainId;
-}
-
-
-/* =========================================================
-   CONNECT WALLET
-   ========================================================= */
-
-async function connectWallet(){
-
-  const status =
-    document.getElementById(
-      "status"
-    );
-
-  const deployButton =
-    document.getElementById(
-      "deployButton"
-    );
-
-
-  try{
-
-    status.innerHTML =
-      "Connecting...";
-
-
-    await requireTestnet();
-
-
-    const accounts =
-      await getProvider().request({
-        method:
-          "eth_requestAccounts"
-      });
-
-
-    if(
-      !accounts ||
-      accounts.length === 0
-    ){
-
-      throw new Error(
-        "No wallet account returned."
-      );
-    }
-
-
-    account =
-      accounts[0];
-
-
-    status.innerHTML = `
-      <span class="good">
-      Connected ✅
-      </span>
-
-      <br><br>
-
-      BSC Testnet
-
-      <br><br>
-
-      Wallet:
-
-      <br>
-
-      ${account}
-
-      <br><br>
-
-      <strong>
-      Ready to deploy HiveToken V4.
-      </strong>
-    `;
-
-
-    deployButton.disabled =
-      false;
-
-
-  }catch(error){
-
-    account =
-      null;
-
-    deployButton.disabled =
-      true;
-
-
-    status.innerHTML = `
-      <span class="bad">
-      Connection failed ❌
-      </span>
-
-      <br><br>
-
-      ${error.message}
-    `;
-  }
-}
-
-
-/* =========================================================
-   DEPLOY HIVETOKEN V4
-   ========================================================= */
-
-async function deployHiveToken(){
-
-  const status =
-    document.getElementById(
-      "status"
-    );
-
-  const deployButton =
-    document.getElementById(
-      "deployButton"
-    );
-
-
-  try{
-
-    if(!account){
-
-      throw new Error(
-        "Connect wallet first."
-      );
-    }
-
-
-    await requireTestnet();
-
-
-    /*
-      Verify compiled V4 bytecode loaded.
-    */
-
-    if(
-      typeof window.HIVE_BYTECODE
-        !== "string" ||
-      !window.HIVE_BYTECODE
-        .startsWith("0x") ||
-      window.HIVE_BYTECODE
-        .length < 10
-    ){
-
-      throw new Error(
-        "HiveToken V4 bytecode was not loaded."
-      );
-    }
-
-
-    /*
-      Encode constructor:
-
-      constructor(
-        address routerAddress,
-        address payable hiveFundingAddress
-      )
-    */
-
-    const encodedArgs =
-      ethers.utils.defaultAbiCoder.encode(
-        [
-          "address",
-          "address"
-        ],
-        [
-          ROUTER,
-          HIVE_RECEIVER
-        ]
-      );
-
-
-    /*
-      Creation bytecode + constructor args.
-    */
-
-    const deploymentData =
-      window.HIVE_BYTECODE +
-      encodedArgs.slice(2);
-
-
-    deployButton.disabled =
-      true;
-
-
-    status.innerHTML = `
-      <span class="warning">
-      Waiting for wallet...
-      </span>
-
-      <br><br>
-
-      Review the TESTNET deployment.
-
-      <br><br>
-
-      Network must show:
-
-      <br>
-
-      <strong>
-      BNB Smart Chain Testnet
-      </strong>
-
-      <br><br>
-
-      Do NOT approve if your wallet shows
-      BSC Mainnet.
-    `;
-
-
-    /*
-      Deploy contract.
-
-      No "to" address because this is
-      contract creation.
-    */
-
-    const txHash =
-      await getProvider().request({
-
-        method:
-          "eth_sendTransaction",
-
-        params:[
-          {
-            from:
-              account,
-
-            data:
-              deploymentData,
-
-            value:
-              "0x0"
-          }
-        ]
-
-      });
-
-
-    status.innerHTML = `
-      <span class="good">
-      Deployment sent ✅
-      </span>
-
-      <br><br>
-
-      Transaction:
-
-      <br><br>
-
-      ${txHash}
-
-      <br><br>
-
-      Waiting for confirmation...
-    `;
-
-
-    /*
-      Wait for transaction receipt.
-    */
-
-    let receipt =
-      null;
-
-
-    while(!receipt){
-
-      await new Promise(
-        resolve =>
-          setTimeout(
-            resolve,
-            2500
-          )
-      );
-
-
-      receipt =
-        await getProvider().request({
-
-          method:
-            "eth_getTransactionReceipt",
-
-          params:[
-            txHash
-          ]
-
-        });
-
-    }
-
-
-    /*
-      Confirm successful execution.
-    */
-
-    if(
-      receipt.status &&
-      receipt.status.toLowerCase()
-        !== "0x1"
-    ){
-
-      throw new Error(
-        "HiveToken deployment reverted."
-      );
-    }
-
-
-    if(
-      !receipt.contractAddress
-    ){
-
-      throw new Error(
-        "Deployment confirmed but no HiveToken contract address was returned."
-      );
-    }
-
-
-    status.innerHTML = `
-      <span class="good">
-      HIVETOKEN V4 DEPLOYED ✅
-      </span>
-
-      <br><br>
-
-      <strong>
-      HiveToken V4:
-      </strong>
-
-      <br><br>
-
-      ${receipt.contractAddress}
-
-      <br><br>
-
-      <strong>
-      Transaction:
-      </strong>
-
-      <br><br>
-
-      ${txHash}
-
-      <br><br>
-
-      Router:
-
-      <br>
-
-      ${ROUTER}
-
-      <br><br>
-
-      Test Hive Receiver:
-
-      <br>
-
-      ${HIVE_RECEIVER}
-
-      <br><br>
-
-      <strong>
-      Stop here after deployment.
-      </strong>
-
-      <br><br>
-
-      Do not add liquidity yet.
-      We will verify V4 first.
-    `;
-
-
-  }catch(error){
-
-    deployButton.disabled =
-      false;
-
-
-    status.innerHTML = `
-      <span class="bad">
-      Deployment failed ❌
-      </span>
-
-      <br><br>
-
-      ${error.message}
-    `;
-  }
-}
-
-
-/* =========================================================
-   WALLET CHANGES
-   ========================================================= */
-
-if(
-  typeof window.ethereum !== "undefined"
+function line(
+  name,
+  value,
+  pass
 ){
 
-  window.ethereum.on(
-    "accountsChanged",
-    function(){
+  return `
+    <div style="margin-bottom:16px;">
 
-      account =
-        null;
+      <strong>
+      ${name}
+      </strong>
 
-      document.getElementById(
-        "deployButton"
-      ).disabled =
-        true;
+      <br>
 
-      document.getElementById(
-        "status"
-      ).innerHTML =
-        "Wallet changed. Connect again.";
+      ${value}
+
+      <br>
+
+      ${
+        pass
+        ?
+        '<span class="good">PASS ✅</span>'
+        :
+        '<span class="bad">FAIL ❌</span>'
+      }
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   VERIFY
+   ========================================================= */
+
+async function verify(){
+
+  const results =
+    document.getElementById(
+      "results"
+    );
+
+  results.innerHTML =
+    "Reading V4 contract...";
+
+
+  try{
+
+    const provider =
+      new ethers.providers.JsonRpcProvider(
+        RPC
+      );
+
+
+    /* -----------------------------
+       VERIFY NETWORK
+       ----------------------------- */
+
+    const network =
+      await provider.getNetwork();
+
+
+    if(
+      Number(network.chainId) !== 97
+    ){
+
+      throw new Error(
+        "RPC is not BSC Testnet. Chain ID: " +
+        network.chainId
+      );
     }
-  );
 
 
-  window.ethereum.on(
-    "chainChanged",
-    function(){
+    /* -----------------------------
+       VERIFY CONTRACT EXISTS
+       ----------------------------- */
 
-      account =
-        null;
+    const code =
+      await provider.getCode(
+        TOKEN
+      );
 
-      document.getElementById(
-        "deployButton"
-      ).disabled =
-        true;
 
-      document.getElementById(
-        "status"
-      ).innerHTML =
-        "Network changed. Connect again.";
+    if(
+      !code ||
+      code === "0x"
+    ){
+
+      throw new Error(
+        "No contract bytecode found at V4 address."
+      );
     }
-  );
+
+
+    const token =
+      new ethers.Contract(
+        TOKEN,
+        ABI,
+        provider
+      );
+
+
+    /* -----------------------------
+       READ V4
+       ----------------------------- */
+
+    const [
+      name,
+      symbol,
+      decimals,
+      totalSupply,
+      owner,
+      hive,
+      router,
+      pair,
+      pairLocked,
+      buyTax,
+      sellTax,
+      denominator,
+      threshold
+    ] =
+    await Promise.all([
+
+      token.name(),
+
+      token.symbol(),
+
+      token.decimals(),
+
+      token.totalSupply(),
+
+      token.owner(),
+
+      token.hiveAddress(),
+
+      token.router(),
+
+      token.pair(),
+
+      token.pairLocked(),
+
+      token.BUY_TAX(),
+
+      token.SELL_TAX(),
+
+      token.TAX_DENOMINATOR(),
+
+      token.swapThreshold()
+
+    ]);
+
+
+    const ownerExempt =
+      await token.isTaxExempt(
+        owner
+      );
+
+
+    const contractExempt =
+      await token.isTaxExempt(
+        TOKEN
+      );
+
+
+    const ownerBalance =
+      await token.balanceOf(
+        owner
+      );
+
+
+    /* -----------------------------
+       EXPECTED VALUES
+       ----------------------------- */
+
+    const expectedSupply =
+      ethers.utils.parseUnits(
+        "1000000",
+        18
+      );
+
+
+    const expectedThreshold =
+      ethers.utils.parseUnits(
+        "100",
+        18
+      );
+
+
+    const ZERO =
+      ethers.constants.AddressZero;
+
+
+    let html = `
+      <span class="good">
+      BSC TESTNET VERIFIED ✅
+      </span>
+
+      <br><br>
+    `;
+
+
+    /* -----------------------------
+       TOKEN INFO
+       ----------------------------- */
+
+    html += line(
+      "Name",
+      name,
+      name === "Hive Token"
+    );
+
+
+    html += line(
+      "Symbol",
+      symbol,
+      symbol === "HIVE"
+    );
+
+
+    html += line(
+      "Decimals",
+      decimals.toString(),
+      Number(decimals) === 18
+    );
+
+
+    html += line(
+      "Total Supply",
+      ethers.utils.formatUnits(
+        totalSupply,
+        18
+      ) + " HIVE",
+      totalSupply.eq(
+        expectedSupply
+      )
+    );
+
+
+    /* -----------------------------
+       OWNER
+       ----------------------------- */
+
+    html += line(
+      "Owner",
+      owner,
+      owner !== ZERO
+    );
+
+
+    html += line(
+      "Owner Tax Exempt",
+      ownerExempt.toString(),
+      ownerExempt === true
+    );
+
+
+    html += line(
+      "HiveToken Contract Tax Exempt",
+      contractExempt.toString(),
+      contractExempt === true
+    );
+
+
+    html += line(
+      "Owner Initial Balance",
+      ethers.utils.formatUnits(
+        ownerBalance,
+        18
+      ) + " HIVE",
+      ownerBalance.eq(
+        expectedSupply
+      )
+    );
+
+
+    /* -----------------------------
+       ROUTER + HIVE RECEIVER
+       ----------------------------- */
+
+    html += line(
+      "PancakeSwap Testnet Router",
+      router,
+      router.toLowerCase() ===
+      EXPECTED_ROUTER.toLowerCase()
+    );
+
+
+    html += line(
+      "V4 Test Hive Receiver",
+      hive,
+      hive.toLowerCase() ===
+      EXPECTED_HIVE.toLowerCase()
+    );
+
+
+    /* -----------------------------
+       TAX
+       ----------------------------- */
+
+    html += line(
+      "Buy Tax",
+      buyTax.toString() +
+      " / " +
+      denominator.toString() +
+      " = 2.5%",
+      buyTax.eq(250) &&
+      denominator.eq(10000)
+    );
+
+
+    html += line(
+      "Sell Tax",
+      sellTax.toString() +
+      " / " +
+      denominator.toString() +
+      " = 2.5%",
+      sellTax.eq(250) &&
+      denominator.eq(10000)
+    );
+
+
+    /* -----------------------------
+       SWAP THRESHOLD
+       ----------------------------- */
+
+    html += line(
+      "Swap Threshold",
+      ethers.utils.formatUnits(
+        threshold,
+        18
+      ) + " HIVE",
+      threshold.eq(
+        expectedThreshold
+      )
+    );
+
+
+    /* -----------------------------
+       PAIR
+       ----------------------------- */
+
+    html += line(
+      "Pair Address",
+      pair,
+      pair === ZERO
+    );
+
+
+    html += line(
+      "Pair Locked",
+      pairLocked.toString(),
+      pairLocked === false
+    );
+
+
+    /* -----------------------------
+       FINAL
+       ----------------------------- */
+
+    const allPass =
+
+      name === "Hive Token" &&
+
+      symbol === "HIVE" &&
+
+      Number(decimals) === 18 &&
+
+      totalSupply.eq(
+        expectedSupply
+      ) &&
+
+      owner !== ZERO &&
+
+      ownerExempt === true &&
+
+      contractExempt === true &&
+
+      ownerBalance.eq(
+        expectedSupply
+      ) &&
+
+      router.toLowerCase() ===
+      EXPECTED_ROUTER.toLowerCase() &&
+
+      hive.toLowerCase() ===
+      EXPECTED_HIVE.toLowerCase() &&
+
+      buyTax.eq(250) &&
+
+      sellTax.eq(250) &&
+
+      denominator.eq(10000) &&
+
+      threshold.eq(
+        expectedThreshold
+      ) &&
+
+      pair === ZERO &&
+
+      pairLocked === false;
+
+
+    if(allPass){
+
+      html += `
+        <hr>
+
+        <span class="good">
+        ALL V4 CHECKS PASSED ✅
+        </span>
+
+        <br><br>
+
+        V4 is ready for the next testnet step:
+
+        <br><br>
+
+        <strong>
+        Create/find HIVE-WBNB pair and configure it.
+        </strong>
+
+        <br><br>
+
+        No transaction was sent by this verification.
+      `;
+
+    }else{
+
+      html += `
+        <hr>
+
+        <span class="bad">
+        ONE OR MORE CHECKS FAILED ❌
+        </span>
+
+        <br><br>
+
+        Stop here and send a screenshot.
+      `;
+    }
+
+
+    results.innerHTML =
+      html;
+
+
+  }catch(error){
+
+    results.innerHTML = `
+      <span class="bad">
+      VERIFICATION ERROR ❌
+      </span>
+
+      <br><br>
+
+      ${error.message}
+    `;
+  }
 
 }
 
