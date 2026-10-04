@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>HiveToken V4 Pair Setup</title>
 
 <style>
@@ -12,6 +13,7 @@ body{
   font-family:Arial,sans-serif;
   padding:20px;
 }
+
 .card{
   max-width:650px;
   margin:auto;
@@ -20,7 +22,11 @@ body{
   border-radius:18px;
   padding:22px;
 }
-h1{color:#ffd45c;}
+
+h1{
+  color:#ffd45c;
+}
+
 .box{
   background:#050705;
   padding:16px;
@@ -29,6 +35,7 @@ h1{color:#ffd45c;}
   overflow-wrap:anywhere;
   line-height:1.7;
 }
+
 button{
   width:100%;
   padding:18px;
@@ -40,10 +47,25 @@ button{
   font-size:18px;
   font-weight:bold;
 }
-button:disabled{opacity:.45;}
-.good{color:#55ef7a;font-weight:bold;}
-.bad{color:#ff5c5c;font-weight:bold;}
-.warning{color:#ffd45c;font-weight:bold;}
+
+button:disabled{
+  opacity:.45;
+}
+
+.good{
+  color:#55ef7a;
+  font-weight:bold;
+}
+
+.bad{
+  color:#ff5c5c;
+  font-weight:bold;
+}
+
+.warning{
+  color:#ffd45c;
+  font-weight:bold;
+}
 </style>
 </head>
 
@@ -54,25 +76,40 @@ button:disabled{opacity:.45;}
 <h1>🐝 HiveToken V4 Pair Setup</h1>
 
 <div class="box">
-<strong>TESTNET ONLY</strong><br><br>
 
-HiveToken V4:<br>
+<strong>TESTNET ONLY</strong>
+
+<br><br>
+
+HiveToken V4:
+
+<br>
+
 0x305cecf060209f758b74dbef91758021f113c608
 
 <br><br>
 
-WBNB:<br>
+WBNB:
+
+<br>
+
 0xae13d989dac2f0debff460ac112a837c89baa7cd
 
 <br><br>
 
-PancakeSwap V2 Factory:<br>
-0x6725F303b657a9451d8BA641348b6761a6cc7a17
+PancakeSwap V2 Factory:
+
+<br>
+
+0x6725f303b657a9451d8ba641348b6761a6cc7a17
+
 </div>
+
 
 <button onclick="connectWallet()">
 1. Connect Wallet
 </button>
+
 
 <button
   id="createButton"
@@ -82,6 +119,7 @@ PancakeSwap V2 Factory:<br>
 2. Create / Find V4 HIVE-WBNB Pair
 </button>
 
+
 <button
   id="setButton"
   onclick="setPair()"
@@ -90,15 +128,27 @@ PancakeSwap V2 Factory:<br>
 3. Permanently Set Pair in HiveToken
 </button>
 
-<div id="status" class="box">
+
+<div
+  id="status"
+  class="box"
+>
 Ready.
 </div>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+<script
+src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js">
+</script>
+
 
 <script>
+
+/* =========================================================
+   CONFIGURATION
+   ========================================================= */
 
 const TOKEN =
 "0x305cecf060209f758b74dbef91758021f113c608";
@@ -107,34 +157,42 @@ const WBNB =
 "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
 const FACTORY =
-"0x6725F303b657a9451d8BA641348b6761a6cc7a17";
+"0x6725f303b657a9451d8ba641348b6761a6cc7a17";
 
 const ZERO =
 "0x0000000000000000000000000000000000000000";
 
-let account = null;
-let pairAddress = null;
+
+let account =
+  null;
+
+let pairAddress =
+  null;
 
 
-/* ==============================================
-   PROVIDER
-   ============================================== */
+/* =========================================================
+   WALLET PROVIDER
+   ========================================================= */
 
 function getEthereum(){
 
-  if(!window.ethereum){
+  if(
+    typeof window.ethereum === "undefined"
+  ){
+
     throw new Error(
       "Wallet provider not found. Open this page inside your wallet browser."
     );
   }
 
+
   return window.ethereum;
 }
 
 
-/* ==============================================
-   NETWORK CHECK
-   ============================================== */
+/* =========================================================
+   VERIFY BSC TESTNET
+   ========================================================= */
 
 async function requireTestnet(){
 
@@ -143,59 +201,76 @@ async function requireTestnet(){
       method:"eth_chainId"
     });
 
-  if(chainId.toLowerCase() !== "0x61"){
+
+  if(
+    chainId.toLowerCase() !== "0x61"
+  ){
+
     throw new Error(
       "Wrong network. Use BNB Smart Chain Testnet — Chain ID 97."
     );
   }
+
 }
 
 
-/* ==============================================
+/* =========================================================
    ETHERS SIGNER
-   ============================================== */
+   ========================================================= */
 
-function signer(){
+function getSigner(){
 
   const provider =
     new ethers.providers.Web3Provider(
       getEthereum()
     );
 
+
   return provider.getSigner();
 }
 
 
-/* ==============================================
-   CONNECT
-   ============================================== */
+/* =========================================================
+   CONNECT WALLET
+   ========================================================= */
 
 async function connectWallet(){
 
   const status =
-    document.getElementById("status");
+    document.getElementById(
+      "status"
+    );
+
 
   try{
 
     await requireTestnet();
 
+
     const accounts =
       await getEthereum().request({
-        method:"eth_requestAccounts"
+        method:
+          "eth_requestAccounts"
       });
 
-    if(!accounts || !accounts.length){
+
+    if(
+      !accounts ||
+      accounts.length === 0
+    ){
+
       throw new Error(
         "No wallet account returned."
       );
     }
+
 
     account =
       accounts[0];
 
 
     /*
-      Verify this wallet is the V4 owner.
+      Verify connected wallet owns V4.
     */
 
     const token =
@@ -206,15 +281,17 @@ async function connectWallet(){
           "function pair() view returns(address)",
           "function pairLocked() view returns(bool)"
         ],
-        signer()
+        getSigner()
       );
 
 
     const owner =
       await token.owner();
 
+
     const currentPair =
       await token.pair();
+
 
     const locked =
       await token.pairLocked();
@@ -224,18 +301,28 @@ async function connectWallet(){
       owner.toLowerCase() !==
       account.toLowerCase()
     ){
+
       throw new Error(
         "Connected wallet is not the HiveToken V4 owner."
       );
     }
 
 
+    /*
+      If pair is already locked,
+      stop immediately.
+    */
+
     if(locked){
 
       status.innerHTML = `
         <span class="good">
-        Pair already configured ✅
+        PAIR ALREADY CONFIGURED ✅
         </span>
+
+        <br><br>
+
+        Pair:
 
         <br><br>
 
@@ -243,8 +330,22 @@ async function connectWallet(){
 
         <br><br>
 
-        No further pair setup is needed.
+        No additional pair setup
+        transaction is needed.
       `;
+
+
+      document.getElementById(
+        "createButton"
+      ).disabled =
+        true;
+
+
+      document.getElementById(
+        "setButton"
+      ).disabled =
+        true;
+
 
       return;
     }
@@ -252,7 +353,8 @@ async function connectWallet(){
 
     document.getElementById(
       "createButton"
-    ).disabled = false;
+    ).disabled =
+      false;
 
 
     status.innerHTML = `
@@ -270,21 +372,29 @@ async function connectWallet(){
 
       <br><br>
 
-      Pair is currently unset.
+      HiveToken pair is currently unset.
 
       <br><br>
 
-      Press:
-
-      <br>
-
       <strong>
-      2. Create / Find V4 HIVE-WBNB Pair
+      Press button 2.
       </strong>
     `;
 
 
   }catch(error){
+
+    document.getElementById(
+      "createButton"
+    ).disabled =
+      true;
+
+
+    document.getElementById(
+      "setButton"
+    ).disabled =
+      true;
+
 
     status.innerHTML = `
       <span class="bad">
@@ -296,17 +406,21 @@ async function connectWallet(){
       ${error.message}
     `;
   }
+
 }
 
 
-/* ==============================================
-   FACTORY
-   ============================================== */
+/* =========================================================
+   CREATE OR FIND PAIR
+   ========================================================= */
 
 async function createOrFindPair(){
 
   const status =
-    document.getElementById("status");
+    document.getElementById(
+      "status"
+    );
+
 
   const createButton =
     document.getElementById(
@@ -318,7 +432,17 @@ async function createOrFindPair(){
 
     await requireTestnet();
 
-    createButton.disabled = true;
+
+    if(!account){
+
+      throw new Error(
+        "Connect wallet first."
+      );
+    }
+
+
+    createButton.disabled =
+      true;
 
 
     const factory =
@@ -328,12 +452,13 @@ async function createOrFindPair(){
           "function getPair(address,address) view returns(address)",
           "function createPair(address,address) returns(address)"
         ],
-        signer()
+        getSigner()
       );
 
 
     /*
-      First check whether V4 already has a pair.
+      First ask the factory if the
+      V4 HIVE/WBNB pair already exists.
     */
 
     let existing =
@@ -342,6 +467,10 @@ async function createOrFindPair(){
         WBNB
       );
 
+
+    /*
+      Existing pair found.
+    */
 
     if(
       existing.toLowerCase() !==
@@ -354,7 +483,8 @@ async function createOrFindPair(){
 
       document.getElementById(
         "setButton"
-      ).disabled = false;
+      ).disabled =
+        false;
 
 
       status.innerHTML = `
@@ -364,7 +494,9 @@ async function createOrFindPair(){
 
         <br><br>
 
-        Pair:
+        <strong>
+        Pair Address:
+        </strong>
 
         <br><br>
 
@@ -372,45 +504,66 @@ async function createOrFindPair(){
 
         <br><br>
 
-        This pair was returned directly by
-        the PancakeSwap V2 factory for:
+        This address was returned directly
+        by the PancakeSwap V2 factory for:
 
         <br><br>
 
-        HiveToken V4 + WBNB
+        HiveToken V4
+
+        <br>
+
+        +
+
+        <br>
+
+        WBNB
 
         <br><br>
 
         <strong>
-        Next press button 3 to permanently
-        set this pair in HiveToken.
+        STOP HERE.
         </strong>
+
+        <br><br>
+
+        Do not press button 3 yet.
+
+        <br><br>
+
+        Send me a screenshot of this
+        pair address first.
       `;
+
 
       return;
     }
 
 
     /*
-      No pair exists.
-
-      Create the pair through the factory.
+      No pair exists yet.
+      Ask wallet to create it.
     */
 
     status.innerHTML = `
       <span class="warning">
-      No V4 pair exists yet.
+      NO V4 PAIR EXISTS YET
       </span>
 
       <br><br>
 
-      Your wallet will now ask you to
-      approve creation of the V4
-      HIVE-WBNB pair.
+      Your wallet will ask you to approve
+      creation of the V4 HIVE-WBNB pair.
 
       <br><br>
 
-      TESTNET ONLY.
+      Network must be:
+
+      <br>
+
+      <strong>
+      BNB Smart Chain Testnet
+      </strong>
     `;
 
 
@@ -422,7 +575,13 @@ async function createOrFindPair(){
 
 
     status.innerHTML = `
-      Pair creation sent ✅
+      <span class="good">
+      PAIR CREATION SENT ✅
+      </span>
+
+      <br><br>
+
+      Transaction:
 
       <br><br>
 
@@ -438,10 +597,8 @@ async function createOrFindPair(){
 
 
     /*
-      Do not trust an event or guessed address.
-
-      Ask the factory again for the canonical
-      pair after the transaction confirms.
+      After confirmation, retrieve the
+      canonical pair directly from factory.
     */
 
     existing =
@@ -455,8 +612,9 @@ async function createOrFindPair(){
       existing.toLowerCase() ===
       ZERO.toLowerCase()
     ){
+
       throw new Error(
-        "Pair creation confirmed, but factory returned zero address."
+        "Pair creation confirmed but factory still returned zero address."
       );
     }
 
@@ -467,7 +625,8 @@ async function createOrFindPair(){
 
     document.getElementById(
       "setButton"
-    ).disabled = false;
+    ).disabled =
+      false;
 
 
     status.innerHTML = `
@@ -489,30 +648,32 @@ async function createOrFindPair(){
 
       Factory:
 
-      <br>
+      <br><br>
 
       ${FACTORY}
 
       <br><br>
 
       <strong>
-      STOP AND CHECK THE ADDRESS ABOVE.
+      STOP HERE.
       </strong>
 
       <br><br>
 
-      Button 3 is now enabled.
+      Do NOT press button 3 yet.
 
       <br><br>
 
-      Pressing button 3 will permanently
-      lock this pair into HiveToken V4.
+      Send me a screenshot of this
+      pair address first.
     `;
 
 
   }catch(error){
 
-    createButton.disabled = false;
+    createButton.disabled =
+      false;
+
 
     status.innerHTML = `
       <span class="bad">
@@ -524,17 +685,21 @@ async function createOrFindPair(){
       ${error.message}
     `;
   }
+
 }
 
 
-/* ==============================================
-   SET + LOCK PAIR
-   ============================================== */
+/* =========================================================
+   PERMANENTLY SET PAIR
+   ========================================================= */
 
 async function setPair(){
 
   const status =
-    document.getElementById("status");
+    document.getElementById(
+      "status"
+    );
+
 
   const setButton =
     document.getElementById(
@@ -547,7 +712,16 @@ async function setPair(){
     await requireTestnet();
 
 
+    if(!account){
+
+      throw new Error(
+        "Connect wallet first."
+      );
+    }
+
+
     if(!pairAddress){
+
       throw new Error(
         "No verified pair address loaded."
       );
@@ -555,8 +729,8 @@ async function setPair(){
 
 
     /*
-      Recheck factory immediately before
-      permanent setPair().
+      Recheck the factory immediately
+      before permanent configuration.
     */
 
     const factory =
@@ -565,7 +739,7 @@ async function setPair(){
         [
           "function getPair(address,address) view returns(address)"
         ],
-        signer()
+        getSigner()
       );
 
 
@@ -580,35 +754,69 @@ async function setPair(){
       verifiedPair.toLowerCase() !==
       pairAddress.toLowerCase()
     ){
+
       throw new Error(
-        "Factory pair verification failed. Pair will NOT be locked."
+        "Factory verification failed. Pair will NOT be locked."
       );
     }
 
+
+    /*
+      Recheck token state.
+    */
 
     const token =
       new ethers.Contract(
         TOKEN,
         [
+          "function owner() view returns(address)",
           "function setPair(address)",
           "function pair() view returns(address)",
           "function pairLocked() view returns(bool)"
         ],
-        signer()
+        getSigner()
       );
 
 
-    setButton.disabled = true;
+    const owner =
+      await token.owner();
+
+
+    if(
+      owner.toLowerCase() !==
+      account.toLowerCase()
+    ){
+
+      throw new Error(
+        "Connected wallet is not the HiveToken owner."
+      );
+    }
+
+
+    const alreadyLocked =
+      await token.pairLocked();
+
+
+    if(alreadyLocked){
+
+      throw new Error(
+        "HiveToken pair is already locked."
+      );
+    }
+
+
+    setButton.disabled =
+      true;
 
 
     status.innerHTML = `
       <span class="warning">
-      FINAL PAIR CONFIGURATION
+      PERMANENT PAIR CONFIGURATION
       </span>
 
       <br><br>
 
-      Pair verified directly with factory:
+      Factory verified pair:
 
       <br><br>
 
@@ -616,12 +824,14 @@ async function setPair(){
 
       <br><br>
 
-      Your wallet will ask you to approve
-      HiveToken.setPair().
+      Your wallet will request approval
+      for HiveToken.setPair().
 
       <br><br>
 
-      This setting is permanent.
+      <strong>
+      This setting cannot be changed later.
+      </strong>
     `;
 
 
@@ -647,8 +857,13 @@ async function setPair(){
     await tx.wait();
 
 
+    /*
+      Verify permanent state.
+    */
+
     const savedPair =
       await token.pair();
+
 
     const locked =
       await token.pairLocked();
@@ -659,6 +874,7 @@ async function setPair(){
       savedPair.toLowerCase() !==
       verifiedPair.toLowerCase()
     ){
+
       throw new Error(
         "Post-transaction pair verification failed."
       );
@@ -700,13 +916,15 @@ async function setPair(){
 
       <br><br>
 
-      Send me a screenshot of this result.
+      Send me a screenshot.
     `;
 
 
   }catch(error){
 
-    setButton.disabled = false;
+    setButton.disabled =
+      false;
+
 
     status.innerHTML = `
       <span class="bad">
@@ -718,14 +936,17 @@ async function setPair(){
       ${error.message}
     `;
   }
+
 }
 
 
-/* ==============================================
-   WALLET CHANGES
-   ============================================== */
+/* =========================================================
+   WALLET / NETWORK CHANGES
+   ========================================================= */
 
-if(window.ethereum){
+if(
+  typeof window.ethereum !== "undefined"
+){
 
   window.ethereum.on(
     "accountsChanged",
@@ -733,6 +954,7 @@ if(window.ethereum){
       location.reload();
     }
   );
+
 
   window.ethereum.on(
     "chainChanged",
