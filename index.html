@@ -2,23 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
->
-
-<title>HiveToken V4 Liquidity</title>
+<title>HiveToken V4 Buy Tax Test</title>
 
 <style>
-
 body{
   background:#0b0f0b;
   color:white;
   font-family:Arial,sans-serif;
   padding:20px;
 }
-
 .card{
   max-width:650px;
   margin:auto;
@@ -27,11 +21,7 @@ body{
   border-radius:18px;
   padding:22px;
 }
-
-h1{
-  color:#ffd45c;
-}
-
+h1{color:#ffd45c;}
 .box{
   background:#050705;
   padding:16px;
@@ -40,7 +30,6 @@ h1{
   overflow-wrap:anywhere;
   line-height:1.7;
 }
-
 button{
   width:100%;
   padding:18px;
@@ -52,26 +41,10 @@ button{
   font-size:18px;
   font-weight:bold;
 }
-
-button:disabled{
-  opacity:.45;
-}
-
-.good{
-  color:#55ef7a;
-  font-weight:bold;
-}
-
-.bad{
-  color:#ff5c5c;
-  font-weight:bold;
-}
-
-.warning{
-  color:#ffd45c;
-  font-weight:bold;
-}
-
+button:disabled{opacity:.45;}
+.good{color:#55ef7a;font-weight:bold;}
+.bad{color:#ff5c5c;font-weight:bold;}
+.warning{color:#ffd45c;font-weight:bold;}
 </style>
 </head>
 
@@ -79,8 +52,7 @@ button:disabled{
 
 <div class="card">
 
-<h1>🐝 HiveToken V4 Liquidity Test</h1>
-
+<h1>🐝 HiveToken V4 Buy Tax Test</h1>
 
 <div class="box">
 
@@ -88,66 +60,53 @@ button:disabled{
 
 <br><br>
 
-HiveToken V4:
+Buy amount:
 
 <br>
 
-0x305cecf060209f758b74dbef91758021f113c608
+<strong>0.001 tBNB</strong>
 
 <br><br>
 
-V4 HIVE/WBNB Pair:
+Expected HIVE buy tax:
 
 <br>
 
-0x3f8016dea6df1323fe2bee493b15593a8a2b149e
+<strong>2.5%</strong>
 
 </div>
 
 
 <div class="box">
 
-<strong>Test Liquidity</strong>
+<strong>HiveToken V4</strong>
 
 <br><br>
 
-10,000 HIVE
-
-<br>
-
-+
-
-<br>
-
-0.01 tBNB
+0x305cecf060209f758b74dbef91758021f113c608
 
 <br><br>
 
-This is testnet only.
+<strong>V4 HIVE/WBNB Pair</strong>
+
+<br><br>
+
+0x3f8016dea6df1323fe2bee493b15593a8a2b149e
 
 </div>
 
 
 <button onclick="connectWallet()">
-1. Connect Wallet
+1. Connect Buyer Wallet
 </button>
 
 
 <button
-  id="approveButton"
-  onclick="approveHive()"
+  id="buyButton"
+  onclick="runBuyTest()"
   disabled
 >
-2. Approve 10,000 HIVE
-</button>
-
-
-<button
-  id="liquidityButton"
-  onclick="addLiquidity()"
-  disabled
->
-3. Add Test Liquidity
+2. Buy HIVE With 0.001 tBNB
 </button>
 
 
@@ -157,7 +116,6 @@ This is testnet only.
 >
 Ready.
 </div>
-
 
 </div>
 
@@ -170,7 +128,7 @@ src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js">
 <script>
 
 /* =========================================================
-   CONFIGURATION
+   CONFIG
    ========================================================= */
 
 const TOKEN =
@@ -185,55 +143,43 @@ const ROUTER =
 const WBNB =
 "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
-
-const HIVE_AMOUNT =
-ethers.utils.parseUnits(
-  "10000",
-  18
-);
-
-
-const BNB_AMOUNT =
+const BUY_AMOUNT =
 ethers.utils.parseEther(
-  "0.01"
+  "0.001"
 );
-
 
 let account =
   null;
 
 
 /* =========================================================
-   WALLET
+   PROVIDER
    ========================================================= */
 
-function getEthereum(){
+function ethereum(){
 
-  if(
-    typeof window.ethereum === "undefined"
-  ){
+  if(!window.ethereum){
 
     throw new Error(
-      "Wallet provider not found. Open this page inside your wallet browser."
+      "Wallet provider not found."
     );
   }
-
 
   return window.ethereum;
 }
 
 
-function getProvider(){
+function provider(){
 
   return new ethers.providers.Web3Provider(
-    getEthereum()
+    ethereum()
   );
 }
 
 
-function getSigner(){
+function signer(){
 
-  return getProvider().getSigner();
+  return provider().getSigner();
 }
 
 
@@ -244,7 +190,7 @@ function getSigner(){
 async function requireTestnet(){
 
   const chainId =
-    await getEthereum().request({
+    await ethereum().request({
       method:"eth_chainId"
     });
 
@@ -262,7 +208,7 @@ async function requireTestnet(){
 
 
 /* =========================================================
-   CONNECT
+   CONNECT BUYER
    ========================================================= */
 
 async function connectWallet(){
@@ -279,7 +225,7 @@ async function connectWallet(){
 
 
     const accounts =
-      await getEthereum().request({
+      await ethereum().request({
         method:
           "eth_requestAccounts"
       });
@@ -300,23 +246,16 @@ async function connectWallet(){
       accounts[0];
 
 
-    /*
-      Verify token configuration before
-      allowing liquidity.
-    */
-
     const token =
       new ethers.Contract(
         TOKEN,
         [
           "function owner() view returns(address)",
-          "function pair() view returns(address)",
-          "function pairLocked() view returns(bool)",
           "function isTaxExempt(address) view returns(bool)",
-          "function balanceOf(address) view returns(uint256)",
-          "function allowance(address,address) view returns(uint256)"
+          "function pair() view returns(address)",
+          "function pairLocked() view returns(bool)"
         ],
-        getSigner()
+        provider()
       );
 
 
@@ -324,36 +263,24 @@ async function connectWallet(){
       await token.owner();
 
 
+    /*
+      Buyer must NOT be owner.
+    */
+
     if(
-      owner.toLowerCase() !==
-      account.toLowerCase()
+      account.toLowerCase() ===
+      owner.toLowerCase()
     ){
 
       throw new Error(
-        "Connected wallet is not the HiveToken V4 owner."
+        "This is the owner wallet. Switch to the second non-owner test wallet."
       );
     }
 
 
-    const configuredPair =
-      await token.pair();
-
-
-    const pairLocked =
-      await token.pairLocked();
-
-
-    if(
-      configuredPair.toLowerCase() !==
-      PAIR.toLowerCase() ||
-      !pairLocked
-    ){
-
-      throw new Error(
-        "HiveToken V4 pair configuration does not match expected pair."
-      );
-    }
-
+    /*
+      Buyer must NOT be tax exempt.
+    */
 
     const exempt =
       await token.isTaxExempt(
@@ -361,390 +288,17 @@ async function connectWallet(){
       );
 
 
-    if(!exempt){
+    if(exempt){
 
       throw new Error(
-        "Owner wallet is not tax exempt. Stop before adding liquidity."
+        "This wallet is tax exempt. Use a non-exempt test wallet."
       );
     }
-
-
-    const hiveBalance =
-      await token.balanceOf(
-        account
-      );
-
-
-    if(
-      hiveBalance.lt(
-        HIVE_AMOUNT
-      )
-    ){
-
-      throw new Error(
-        "Wallet does not have 10,000 HIVE."
-      );
-    }
-
-
-    const bnbBalance =
-      await getProvider().getBalance(
-        account
-      );
-
-
-    if(
-      bnbBalance.lte(
-        BNB_AMOUNT
-      )
-    ){
-
-      throw new Error(
-        "Wallet needs more than 0.01 tBNB to cover liquidity plus gas."
-      );
-    }
-
-
-    const allowance =
-      await token.allowance(
-        account,
-        ROUTER
-      );
-
-
-    if(
-      allowance.gte(
-        HIVE_AMOUNT
-      )
-    ){
-
-      document.getElementById(
-        "approveButton"
-      ).disabled =
-        true;
-
-
-      document.getElementById(
-        "liquidityButton"
-      ).disabled =
-        false;
-
-
-      status.innerHTML = `
-        <span class="good">
-        READY FOR LIQUIDITY ✅
-        </span>
-
-        <br><br>
-
-        Owner verified.
-
-        <br>
-
-        Pair verified and locked.
-
-        <br>
-
-        Owner tax exemption verified.
-
-        <br>
-
-        HIVE balance verified.
-
-        <br>
-
-        tBNB balance verified.
-
-        <br>
-
-        Router allowance already sufficient.
-
-        <br><br>
-
-        Press:
-
-        <br>
-
-        <strong>
-        3. Add Test Liquidity
-        </strong>
-      `;
-
-
-      return;
-    }
-
-
-    document.getElementById(
-      "approveButton"
-    ).disabled =
-      false;
-
-
-    status.innerHTML = `
-      <span class="good">
-      WALLET VERIFIED ✅
-      </span>
-
-      <br><br>
-
-      Owner verified.
-
-      <br>
-
-      Pair verified and locked.
-
-      <br>
-
-      Owner tax exemption verified.
-
-      <br>
-
-      HIVE balance verified.
-
-      <br>
-
-      tBNB balance verified.
-
-      <br><br>
-
-      <strong>
-      Press button 2 to approve
-      10,000 HIVE.
-      </strong>
-    `;
-
-
-  }catch(error){
-
-    status.innerHTML = `
-      <span class="bad">
-      CHECK FAILED ❌
-      </span>
-
-      <br><br>
-
-      ${error.message}
-    `;
-  }
-
-}
-
-
-/* =========================================================
-   APPROVE HIVE
-   ========================================================= */
-
-async function approveHive(){
-
-  const status =
-    document.getElementById(
-      "status"
-    );
-
-
-  const approveButton =
-    document.getElementById(
-      "approveButton"
-    );
-
-
-  try{
-
-    await requireTestnet();
-
-
-    if(!account){
-
-      throw new Error(
-        "Connect wallet first."
-      );
-    }
-
-
-    approveButton.disabled =
-      true;
-
-
-    const token =
-      new ethers.Contract(
-        TOKEN,
-        [
-          "function approve(address,uint256) returns(bool)",
-          "function allowance(address,address) view returns(uint256)"
-        ],
-        getSigner()
-      );
-
-
-    status.innerHTML = `
-      <span class="warning">
-      APPROVAL REQUIRED
-      </span>
-
-      <br><br>
-
-      Your wallet will ask you to approve:
-
-      <br><br>
-
-      <strong>
-      10,000 HIVE
-      </strong>
-
-      <br><br>
-
-      Spender:
-
-      <br>
-
-      PancakeSwap Testnet Router
-
-      <br><br>
-
-      ${ROUTER}
-    `;
-
-
-    const tx =
-      await token.approve(
-        ROUTER,
-        HIVE_AMOUNT
-      );
-
-
-    status.innerHTML = `
-      Approval sent ✅
-
-      <br><br>
-
-      ${tx.hash}
-
-      <br><br>
-
-      Waiting for confirmation...
-    `;
-
-
-    await tx.wait();
-
-
-    const allowance =
-      await token.allowance(
-        account,
-        ROUTER
-      );
-
-
-    if(
-      allowance.lt(
-        HIVE_AMOUNT
-      )
-    ){
-
-      throw new Error(
-        "Approval confirmed but allowance is below 10,000 HIVE."
-      );
-    }
-
-
-    document.getElementById(
-      "liquidityButton"
-    ).disabled =
-      false;
-
-
-    status.innerHTML = `
-      <span class="good">
-      10,000 HIVE APPROVED ✅
-      </span>
-
-      <br><br>
-
-      Router allowance verified.
-
-      <br><br>
-
-      <strong>
-      Next press:
-
-      <br><br>
-
-      3. Add Test Liquidity
-      </strong>
-    `;
-
-
-  }catch(error){
-
-    approveButton.disabled =
-      false;
-
-
-    status.innerHTML = `
-      <span class="bad">
-      APPROVAL FAILED ❌
-      </span>
-
-      <br><br>
-
-      ${error.message}
-    `;
-  }
-
-}
-
-
-/* =========================================================
-   ADD LIQUIDITY
-   ========================================================= */
-
-async function addLiquidity(){
-
-  const status =
-    document.getElementById(
-      "status"
-    );
-
-
-  const liquidityButton =
-    document.getElementById(
-      "liquidityButton"
-    );
-
-
-  try{
-
-    await requireTestnet();
-
-
-    if(!account){
-
-      throw new Error(
-        "Connect wallet first."
-      );
-    }
-
-
-    liquidityButton.disabled =
-      true;
 
 
     /*
-      Verify pair one final time.
+      Verify pair configuration.
     */
-
-    const token =
-      new ethers.Contract(
-        TOKEN,
-        [
-          "function pair() view returns(address)",
-          "function pairLocked() view returns(bool)",
-          "function allowance(address,address) view returns(uint256)"
-        ],
-        getSigner()
-      );
-
 
     const configuredPair =
       await token.pair();
@@ -761,53 +315,186 @@ async function addLiquidity(){
     ){
 
       throw new Error(
-        "Pair verification failed."
-      );
-    }
-
-
-    const allowance =
-      await token.allowance(
-        account,
-        ROUTER
-      );
-
-
-    if(
-      allowance.lt(
-        HIVE_AMOUNT
-      )
-    ){
-
-      throw new Error(
-        "Router allowance is below 10,000 HIVE."
+        "V4 pair verification failed."
       );
     }
 
 
     /*
-      Router addLiquidityETH.
+      Check tBNB.
+    */
 
-      amountTokenMin and amountETHMin are
-      set equal to desired amounts because
-      this is the first liquidity for the
-      new empty pair.
+    const bnbBalance =
+      await provider().getBalance(
+        account
+      );
 
-      LP tokens go directly to owner wallet.
+
+    if(
+      bnbBalance.lte(
+        BUY_AMOUNT
+      )
+    ){
+
+      throw new Error(
+        "Buyer needs more than 0.001 tBNB for the buy plus gas."
+      );
+    }
+
+
+    document.getElementById(
+      "buyButton"
+    ).disabled =
+      false;
+
+
+    status.innerHTML = `
+      <span class="good">
+      BUYER READY ✅
+      </span>
+
+      <br><br>
+
+      Wallet:
+
+      <br><br>
+
+      ${account}
+
+      <br><br>
+
+      Non-owner verified.
+
+      <br>
+
+      Non-exempt verified.
+
+      <br>
+
+      V4 pair verified.
+
+      <br>
+
+      tBNB balance verified.
+
+      <br><br>
+
+      <strong>
+      Press button 2 to run the
+      0.001 tBNB buy-tax test.
+      </strong>
+    `;
+
+
+  }catch(error){
+
+    document.getElementById(
+      "buyButton"
+    ).disabled =
+      true;
+
+
+    status.innerHTML = `
+      <span class="bad">
+      BUYER CHECK FAILED ❌
+      </span>
+
+      <br><br>
+
+      ${error.message}
+    `;
+  }
+
+}
+
+
+/* =========================================================
+   BUY TAX TEST
+   ========================================================= */
+
+async function runBuyTest(){
+
+  const status =
+    document.getElementById(
+      "status"
+    );
+
+
+  const buyButton =
+    document.getElementById(
+      "buyButton"
+    );
+
+
+  try{
+
+    await requireTestnet();
+
+
+    if(!account){
+
+      throw new Error(
+        "Connect buyer wallet first."
+      );
+    }
+
+
+    buyButton.disabled =
+      true;
+
+
+    const token =
+      new ethers.Contract(
+        TOKEN,
+        [
+          "function balanceOf(address) view returns(uint256)"
+        ],
+        provider()
+      );
+
+
+    /*
+      Record balances BEFORE buy.
+    */
+
+    const buyerBefore =
+      await token.balanceOf(
+        account
+      );
+
+
+    const taxBefore =
+      await token.balanceOf(
+        TOKEN
+      );
+
+
+    const pairBefore =
+      await token.balanceOf(
+        PAIR
+      );
+
+
+    /*
+      PancakeSwap router.
+
+      SupportingFeeOnTransferTokens is
+      required because HIVE charges its
+      2.5% buy tax when pair -> buyer.
     */
 
     const router =
       new ethers.Contract(
         ROUTER,
         [
-          "function addLiquidityETH(address token,uint256 amountTokenDesired,uint256 amountTokenMin,uint256 amountETHMin,address to,uint256 deadline) payable returns(uint256 amountToken,uint256 amountETH,uint256 liquidity)"
+          "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin,address[] calldata path,address to,uint256 deadline) payable"
         ],
-        getSigner()
+        signer()
       );
 
 
     const block =
-      await getProvider().getBlock(
+      await provider().getBlock(
         "latest"
       );
 
@@ -816,38 +503,27 @@ async function addLiquidity(){
       block.timestamp + 1200;
 
 
+    const path =
+      [
+        WBNB,
+        TOKEN
+      ];
+
+
     status.innerHTML = `
       <span class="warning">
-      ADDING TEST LIQUIDITY
+      BUY TAX TEST
       </span>
 
       <br><br>
 
-      Your wallet will ask you to approve:
+      Your wallet will ask you to swap:
 
       <br><br>
 
       <strong>
-      10,000 HIVE
+      0.001 tBNB → HIVE
       </strong>
-
-      <br>
-
-      +
-
-      <br>
-
-      <strong>
-      0.01 tBNB
-      </strong>
-
-      <br><br>
-
-      LP tokens will be sent to:
-
-      <br><br>
-
-      ${account}
 
       <br><br>
 
@@ -856,23 +532,22 @@ async function addLiquidity(){
 
 
     const tx =
-      await router.addLiquidityETH(
-        TOKEN,
-        HIVE_AMOUNT,
-        HIVE_AMOUNT,
-        BNB_AMOUNT,
-        account,
-        deadline,
-        {
-          value:
-            BNB_AMOUNT
-        }
-      );
+      await router
+        .swapExactETHForTokensSupportingFeeOnTransferTokens(
+          0,
+          path,
+          account,
+          deadline,
+          {
+            value:
+              BUY_AMOUNT
+          }
+        );
 
 
     status.innerHTML = `
       <span class="good">
-      LIQUIDITY TRANSACTION SENT ✅
+      BUY SENT ✅
       </span>
 
       <br><br>
@@ -889,162 +564,223 @@ async function addLiquidity(){
 
 
     /*
-      Verify LP token balance.
+      Read balances AFTER buy.
     */
 
-    const pair =
-      new ethers.Contract(
-        PAIR,
-        [
-          "function balanceOf(address) view returns(uint256)",
-          "function totalSupply() view returns(uint256)",
-          "function getReserves() view returns(uint112,uint112,uint32)",
-          "function token0() view returns(address)",
-          "function token1() view returns(address)"
-        ],
-        getProvider()
-      );
-
-
-    const lpBalance =
-      await pair.balanceOf(
+    const buyerAfter =
+      await token.balanceOf(
         account
       );
 
 
-    const totalLP =
-      await pair.totalSupply();
+    const taxAfter =
+      await token.balanceOf(
+        TOKEN
+      );
 
 
-    const reserves =
-      await pair.getReserves();
+    const pairAfter =
+      await token.balanceOf(
+        PAIR
+      );
 
 
-    const token0 =
-      await pair.token0();
+    const buyerReceived =
+      buyerAfter.sub(
+        buyerBefore
+      );
 
 
-    const token1 =
-      await pair.token1();
+    const taxCollected =
+      taxAfter.sub(
+        taxBefore
+      );
+
+
+    const pairSent =
+      pairBefore.sub(
+        pairAfter
+      );
+
+
+    /*
+      Exact expected tax:
+
+      gross pair transfer * 250 / 10000
+    */
+
+    const expectedTax =
+      pairSent
+        .mul(250)
+        .div(10000);
+
+
+    const expectedBuyer =
+      pairSent.sub(
+        expectedTax
+      );
+
+
+    const taxPass =
+      taxCollected.eq(
+        expectedTax
+      );
+
+
+    const buyerPass =
+      buyerReceived.eq(
+        expectedBuyer
+      );
 
 
     if(
-      lpBalance.eq(0)
+      taxPass &&
+      buyerPass
     ){
 
-      throw new Error(
-        "Liquidity transaction confirmed but owner LP balance is zero."
-      );
+      status.innerHTML = `
+        <span class="good">
+        V4 BUY TAX PASSED ✅
+        </span>
+
+        <br><br>
+
+        <strong>
+        Gross HIVE sent by pair:
+        </strong>
+
+        <br>
+
+        ${ethers.utils.formatUnits(
+          pairSent,
+          18
+        )} HIVE
+
+        <br><br>
+
+        <strong>
+        Buyer received:
+        </strong>
+
+        <br>
+
+        ${ethers.utils.formatUnits(
+          buyerReceived,
+          18
+        )} HIVE
+
+        <br><br>
+
+        <strong>
+        HIVE tax collected:
+        </strong>
+
+        <br>
+
+        ${ethers.utils.formatUnits(
+          taxCollected,
+          18
+        )} HIVE
+
+        <br><br>
+
+        <strong>
+        Expected 2.5% tax:
+        </strong>
+
+        <br>
+
+        ${ethers.utils.formatUnits(
+          expectedTax,
+          18
+        )} HIVE
+
+        <br><br>
+
+        <span class="good">
+        EXACT 2.5% BUY TAX VERIFIED ✅
+        </span>
+
+        <br><br>
+
+        STOP HERE.
+
+        <br><br>
+
+        Do not sell yet.
+
+        <br><br>
+
+        Send me a screenshot.
+      `;
+
+    }else{
+
+      status.innerHTML = `
+        <span class="bad">
+        BUY TAX CHECK FAILED ❌
+        </span>
+
+        <br><br>
+
+        Gross pair transfer:
+
+        <br>
+
+        ${ethers.utils.formatUnits(
+          pairSent,
+          18
+        )} HIVE
+
+        <br><br>
+
+        Buyer received:
+
+        <br>
+
+        ${ethers.utils.formatUnits(
+          buyerReceived,
+          18
+        )} HIVE
+
+        <br><br>
+
+        Actual tax:
+
+        <br>
+
+        ${ethers.utils.formatUnits(
+          taxCollected,
+          18
+        )} HIVE
+
+        <br><br>
+
+        Expected tax:
+
+        <br>
+
+        ${ethers.utils.formatUnits(
+          expectedTax,
+          18
+        )} HIVE
+
+        <br><br>
+
+        STOP HERE.
+      `;
     }
-
-
-    if(
-      totalLP.eq(0)
-    ){
-
-      throw new Error(
-        "Pair total LP supply is zero."
-      );
-    }
-
-
-    status.innerHTML = `
-      <span class="good">
-      V4 TEST LIQUIDITY ADDED ✅
-      </span>
-
-      <br><br>
-
-      <strong>
-      Pair:
-      </strong>
-
-      <br><br>
-
-      ${PAIR}
-
-      <br><br>
-
-      <strong>
-      LP Tokens Received:
-      </strong>
-
-      <br><br>
-
-      ${ethers.utils.formatUnits(
-        lpBalance,
-        18
-      )}
-
-      <br><br>
-
-      <strong>
-      Pair Token 0:
-      </strong>
-
-      <br>
-
-      ${token0}
-
-      <br><br>
-
-      <strong>
-      Pair Token 1:
-      </strong>
-
-      <br>
-
-      ${token1}
-
-      <br><br>
-
-      <strong>
-      Reserve 0:
-      </strong>
-
-      <br>
-
-      ${reserves[0].toString()}
-
-      <br><br>
-
-      <strong>
-      Reserve 1:
-      </strong>
-
-      <br>
-
-      ${reserves[1].toString()}
-
-      <br><br>
-
-      <strong>
-      TEST LIQUIDITY VERIFIED ✅
-      </strong>
-
-      <br><br>
-
-      STOP HERE.
-
-      <br><br>
-
-      Do not perform a buy or sell yet.
-
-      <br><br>
-
-      Send me a screenshot of this result.
-    `;
 
 
   }catch(error){
 
-    liquidityButton.disabled =
+    buyButton.disabled =
       false;
 
 
     status.innerHTML = `
       <span class="bad">
-      LIQUIDITY FAILED ❌
+      BUY TEST FAILED ❌
       </span>
 
       <br><br>
@@ -1060,9 +796,7 @@ async function addLiquidity(){
    WALLET CHANGES
    ========================================================= */
 
-if(
-  typeof window.ethereum !== "undefined"
-){
+if(window.ethereum){
 
   window.ethereum.on(
     "accountsChanged",
