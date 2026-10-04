@@ -24,22 +24,28 @@ jobs:
       - name: Install Solidity compiler
         run: npm install solc@0.8.20
 
-      - name: Compile HiveToken
+      - name: Compile HiveToken and Test Receiver
         run: |
           rm -rf build
           mkdir -p build
-          npx solcjs --bin --abi contracts/HiveToken.sol -o build
+          npx solcjs --bin --abi contracts/HiveToken.sol contracts/TestHiveReceiver.sol -o build
 
-      - name: Create deployment file
+      - name: Create deployment files
         run: |
-          BIN=$(cat build/contracts_HiveToken_sol_HiveToken.bin)
-          echo "window.HIVE_BYTECODE='0x${BIN}';" > hive-bytecode.js
+          HIVE_BIN=$(cat build/contracts_HiveToken_sol_HiveToken.bin)
+          RECEIVER_BIN=$(cat build/contracts_TestHiveReceiver_sol_TestHiveReceiver.bin)
 
-      - name: Commit deployment file
+          echo "window.HIVE_BYTECODE='0x${HIVE_BIN}';" > hive-bytecode.js
+          echo "window.TEST_HIVE_RECEIVER_BYTECODE='0x${RECEIVER_BIN}';" > test-hive-receiver-bytecode.js
+
+      - name: Commit deployment files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add hive-bytecode.js
+
+          git add hive-bytecode.js test-hive-receiver-bytecode.js
+
           git diff --cached --quiet && exit 0
-          git commit -m "Update HiveToken deployment bytecode"
+
+          git commit -m "Update V4 deployment bytecode"
           git push
