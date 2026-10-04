@@ -1,18 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>HiveToken V4 Buy Tax Test</title>
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+HiveToken V4 Buy Tax Test
+</title>
+
 
 <style>
+
 body{
   background:#0b0f0b;
   color:white;
   font-family:Arial,sans-serif;
   padding:20px;
 }
+
 .card{
   max-width:650px;
   margin:auto;
@@ -21,7 +32,11 @@ body{
   border-radius:18px;
   padding:22px;
 }
-h1{color:#ffd45c;}
+
+h1{
+  color:#ffd45c;
+}
+
 .box{
   background:#050705;
   padding:16px;
@@ -30,6 +45,7 @@ h1{color:#ffd45c;}
   overflow-wrap:anywhere;
   line-height:1.7;
 }
+
 button{
   width:100%;
   padding:18px;
@@ -41,22 +57,47 @@ button{
   font-size:18px;
   font-weight:bold;
 }
-button:disabled{opacity:.45;}
-.good{color:#55ef7a;font-weight:bold;}
-.bad{color:#ff5c5c;font-weight:bold;}
-.warning{color:#ffd45c;font-weight:bold;}
+
+button:disabled{
+  opacity:.45;
+}
+
+.good{
+  color:#55ef7a;
+  font-weight:bold;
+}
+
+.bad{
+  color:#ff5c5c;
+  font-weight:bold;
+}
+
+.warning{
+  color:#ffd45c;
+  font-weight:bold;
+}
+
 </style>
+
 </head>
+
 
 <body>
 
+
 <div class="card">
 
-<h1>🐝 HiveToken V4 Buy Tax Test</h1>
+
+<h1>
+🐝 HiveToken V4 Buy Tax Test
+</h1>
+
 
 <div class="box">
 
-<strong>TESTNET ONLY</strong>
+<strong>
+TESTNET ONLY
+</strong>
 
 <br><br>
 
@@ -64,7 +105,9 @@ Buy amount:
 
 <br>
 
-<strong>0.001 tBNB</strong>
+<strong>
+0.001 tBNB
+</strong>
 
 <br><br>
 
@@ -72,14 +115,18 @@ Expected HIVE buy tax:
 
 <br>
 
-<strong>2.5%</strong>
+<strong>
+2.5%
+</strong>
 
 </div>
 
 
 <div class="box">
 
-<strong>HiveToken V4</strong>
+<strong>
+HiveToken V4
+</strong>
 
 <br><br>
 
@@ -87,7 +134,9 @@ Expected HIVE buy tax:
 
 <br><br>
 
-<strong>V4 HIVE/WBNB Pair</strong>
+<strong>
+V4 HIVE/WBNB Pair
+</strong>
 
 <br><br>
 
@@ -96,7 +145,9 @@ Expected HIVE buy tax:
 </div>
 
 
-<button onclick="connectWallet()">
+<button
+  onclick="connectWallet()"
+>
 1. Connect Buyer Wallet
 </button>
 
@@ -117,6 +168,7 @@ Expected HIVE buy tax:
 Ready.
 </div>
 
+
 </div>
 
 
@@ -127,89 +179,135 @@ src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js">
 
 <script>
 
+
 /* =========================================================
-   CONFIG
+   CONFIGURATION
    ========================================================= */
+
 
 const TOKEN =
 "0x305cecf060209f758b74dbef91758021f113c608";
 
+
 const PAIR =
 "0x3f8016dea6df1323fe2bee493b15593a8a2b149e";
+
 
 const ROUTER =
 "0xd99d1c33f9fc3444f8101754abc46c52416550d1";
 
+
 const WBNB =
 "0xae13d989dac2f0debff460ac112a837c89baa7cd";
+
 
 const BUY_AMOUNT =
 ethers.utils.parseEther(
   "0.001"
 );
 
+
 let account =
   null;
 
 
+
 /* =========================================================
-   PROVIDER
+   WALLET PROVIDER
    ========================================================= */
 
-function ethereum(){
 
-  if(!window.ethereum){
+function getEthereum(){
+
+  if(
+    typeof window.ethereum === "undefined"
+  ){
 
     throw new Error(
-      "Wallet provider not found."
+      "Wallet provider not found. Open this page inside your wallet browser."
     );
+
   }
 
+
+  if(
+    typeof window.ethereum.request !==
+    "function"
+  ){
+
+    throw new Error(
+      "Wallet provider does not support request()."
+    );
+
+  }
+
+
   return window.ethereum;
+
 }
 
 
-function provider(){
+
+function getProvider(){
 
   return new ethers.providers.Web3Provider(
-    ethereum()
+    getEthereum()
   );
+
 }
 
 
-function signer(){
 
-  return provider().getSigner();
+function getSigner(){
+
+  return getProvider().getSigner();
+
 }
+
 
 
 /* =========================================================
-   NETWORK
+   VERIFY BSC TESTNET
    ========================================================= */
+
 
 async function requireTestnet(){
 
+  const wallet =
+    getEthereum();
+
+
   const chainId =
-    await ethereum().request({
-      method:"eth_chainId"
+    await wallet.request({
+
+      method:
+        "eth_chainId"
+
     });
 
 
   if(
-    chainId.toLowerCase() !== "0x61"
+    chainId.toLowerCase() !==
+    "0x61"
   ){
 
     throw new Error(
       "Wrong network. Use BNB Smart Chain Testnet — Chain ID 97."
     );
+
   }
+
+
+  return chainId;
 
 }
 
 
+
 /* =========================================================
-   CONNECT BUYER
+   CONNECT BUYER WALLET
    ========================================================= */
+
 
 async function connectWallet(){
 
@@ -219,15 +317,40 @@ async function connectWallet(){
     );
 
 
+  const buyButton =
+    document.getElementById(
+      "buyButton"
+    );
+
+
   try{
+
+
+    buyButton.disabled =
+      true;
+
+
+    status.innerHTML =
+      "Checking wallet...";
+
+
+    /*
+      Verify network.
+    */
 
     await requireTestnet();
 
 
+    /*
+      Request wallet account.
+    */
+
     const accounts =
-      await ethereum().request({
+      await getEthereum().request({
+
         method:
           "eth_requestAccounts"
+
       });
 
 
@@ -239,6 +362,7 @@ async function connectWallet(){
       throw new Error(
         "No wallet account returned."
       );
+
     }
 
 
@@ -246,26 +370,41 @@ async function connectWallet(){
       accounts[0];
 
 
+    /*
+      Load HiveToken read-only.
+    */
+
     const token =
       new ethers.Contract(
+
         TOKEN,
+
         [
+
           "function owner() view returns(address)",
+
           "function isTaxExempt(address) view returns(bool)",
+
           "function pair() view returns(address)",
-          "function pairLocked() view returns(bool)"
+
+          "function pairLocked() view returns(bool)",
+
+          "function balanceOf(address) view returns(uint256)"
+
         ],
-        provider()
+
+        getProvider()
+
       );
 
+
+    /*
+      Verify this is NOT owner.
+    */
 
     const owner =
       await token.owner();
 
-
-    /*
-      Buyer must NOT be owner.
-    */
 
     if(
       account.toLowerCase() ===
@@ -273,13 +412,14 @@ async function connectWallet(){
     ){
 
       throw new Error(
-        "This is the owner wallet. Switch to the second non-owner test wallet."
+        "This is the HiveToken owner wallet. Switch to the second non-owner test wallet."
       );
+
     }
 
 
     /*
-      Buyer must NOT be tax exempt.
+      Verify buyer is NOT tax exempt.
     */
 
     const exempt =
@@ -291,41 +431,75 @@ async function connectWallet(){
     if(exempt){
 
       throw new Error(
-        "This wallet is tax exempt. Use a non-exempt test wallet."
+        "This wallet is tax exempt. Use the non-exempt test wallet."
       );
+
     }
 
 
     /*
-      Verify pair configuration.
+      Verify pair.
     */
 
     const configuredPair =
       await token.pair();
 
 
-    const locked =
+    const pairLocked =
       await token.pairLocked();
 
 
     if(
-      !locked ||
+      !pairLocked
+    ){
+
+      throw new Error(
+        "HiveToken pair is not locked."
+      );
+
+    }
+
+
+    if(
       configuredPair.toLowerCase() !==
       PAIR.toLowerCase()
     ){
 
       throw new Error(
-        "V4 pair verification failed."
+        "HiveToken pair does not match the expected V4 pair."
       );
+
     }
 
 
     /*
-      Check tBNB.
+      Verify pair contains contract code.
+    */
+
+    const pairCode =
+      await getProvider().getCode(
+        PAIR
+      );
+
+
+    if(
+      !pairCode ||
+      pairCode === "0x"
+    ){
+
+      throw new Error(
+        "No contract code found at V4 pair address."
+      );
+
+    }
+
+
+    /*
+      Verify buyer has enough tBNB.
     */
 
     const bnbBalance =
-      await provider().getBalance(
+      await getProvider().getBalance(
         account
       );
 
@@ -337,25 +511,37 @@ async function connectWallet(){
     ){
 
       throw new Error(
-        "Buyer needs more than 0.001 tBNB for the buy plus gas."
+        "Buyer needs more than 0.001 tBNB for the test buy plus gas."
       );
+
     }
 
 
-    document.getElementById(
-      "buyButton"
-    ).disabled =
+    /*
+      Display current buyer HIVE balance.
+    */
+
+    const hiveBalance =
+      await token.balanceOf(
+        account
+      );
+
+
+    buyButton.disabled =
       false;
 
 
     status.innerHTML = `
+
       <span class="good">
       BUYER READY ✅
       </span>
 
       <br><br>
 
-      Wallet:
+      <strong>
+      Buyer:
+      </strong>
 
       <br><br>
 
@@ -363,38 +549,75 @@ async function connectWallet(){
 
       <br><br>
 
-      Non-owner verified.
+      Non-owner:
 
       <br>
 
-      Non-exempt verified.
+      <span class="good">
+      VERIFIED ✅
+      </span>
+
+      <br><br>
+
+      Tax exempt:
 
       <br>
 
-      V4 pair verified.
+      false
 
       <br>
 
-      tBNB balance verified.
+      <span class="good">
+      VERIFIED ✅
+      </span>
+
+      <br><br>
+
+      V4 pair:
+
+      <br>
+
+      ${configuredPair}
+
+      <br>
+
+      <span class="good">
+      VERIFIED ✅
+      </span>
+
+      <br><br>
+
+      Current HIVE balance:
+
+      <br>
+
+      ${ethers.utils.formatUnits(
+        hiveBalance,
+        18
+      )} HIVE
 
       <br><br>
 
       <strong>
-      Press button 2 to run the
-      0.001 tBNB buy-tax test.
+      Ready for the 0.001 tBNB buy.
       </strong>
+
     `;
 
 
   }catch(error){
 
-    document.getElementById(
-      "buyButton"
-    ).disabled =
+
+    account =
+      null;
+
+
+    buyButton.disabled =
       true;
 
 
     status.innerHTML = `
+
       <span class="bad">
       BUYER CHECK FAILED ❌
       </span>
@@ -402,15 +625,19 @@ async function connectWallet(){
       <br><br>
 
       ${error.message}
+
     `;
+
   }
 
 }
 
 
+
 /* =========================================================
-   BUY TAX TEST
+   RUN BUY TAX TEST
    ========================================================= */
+
 
 async function runBuyTest(){
 
@@ -428,14 +655,16 @@ async function runBuyTest(){
 
   try{
 
+
     await requireTestnet();
 
 
     if(!account){
 
       throw new Error(
-        "Connect buyer wallet first."
+        "Connect the buyer wallet first."
       );
+
     }
 
 
@@ -443,14 +672,46 @@ async function runBuyTest(){
       true;
 
 
+    /*
+      Token read contract.
+    */
+
     const token =
       new ethers.Contract(
+
         TOKEN,
+
         [
-          "function balanceOf(address) view returns(uint256)"
+
+          "function balanceOf(address) view returns(uint256)",
+
+          "function isTaxExempt(address) view returns(bool)"
+
         ],
-        provider()
+
+        getProvider()
+
       );
+
+
+    /*
+      Recheck buyer exemption immediately
+      before transaction.
+    */
+
+    const exempt =
+      await token.isTaxExempt(
+        account
+      );
+
+
+    if(exempt){
+
+      throw new Error(
+        "Buyer became tax exempt. Stop test."
+      );
+
+    }
 
 
     /*
@@ -476,41 +737,53 @@ async function runBuyTest(){
 
 
     /*
-      PancakeSwap router.
-
-      SupportingFeeOnTransferTokens is
-      required because HIVE charges its
-      2.5% buy tax when pair -> buyer.
+      Router contract.
     */
 
     const router =
       new ethers.Contract(
+
         ROUTER,
+
         [
+
           "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin,address[] calldata path,address to,uint256 deadline) payable"
+
         ],
-        signer()
+
+        getSigner()
+
       );
 
 
+    /*
+      Deadline = current block time
+      + 20 minutes.
+    */
+
     const block =
-      await provider().getBlock(
+      await getProvider().getBlock(
         "latest"
       );
 
 
     const deadline =
-      block.timestamp + 1200;
+      block.timestamp +
+      1200;
 
 
     const path =
       [
+
         WBNB,
+
         TOKEN
+
       ];
 
 
     status.innerHTML = `
+
       <span class="warning">
       BUY TAX TEST
       </span>
@@ -522,33 +795,64 @@ async function runBuyTest(){
       <br><br>
 
       <strong>
-      0.001 tBNB → HIVE
+      0.001 tBNB
+      </strong>
+
+      <br>
+
+      ↓
+
+      <br>
+
+      <strong>
+      HIVE
       </strong>
 
       <br><br>
 
       TESTNET ONLY.
+
     `;
 
+
+    /*
+      Perform buy.
+
+      amountOutMin = 0 for this controlled
+      testnet functional test.
+    */
 
     const tx =
       await router
         .swapExactETHForTokensSupportingFeeOnTransferTokens(
+
           0,
+
           path,
+
           account,
+
           deadline,
+
           {
+
             value:
               BUY_AMOUNT
+
           }
+
         );
 
 
     status.innerHTML = `
+
       <span class="good">
       BUY SENT ✅
       </span>
+
+      <br><br>
+
+      Transaction:
 
       <br><br>
 
@@ -557,6 +861,7 @@ async function runBuyTest(){
       <br><br>
 
       Waiting for confirmation...
+
     `;
 
 
@@ -564,7 +869,7 @@ async function runBuyTest(){
 
 
     /*
-      Read balances AFTER buy.
+      Read balances AFTER transaction.
     */
 
     const buyerAfter =
@@ -585,6 +890,10 @@ async function runBuyTest(){
       );
 
 
+    /*
+      Calculate actual movements.
+    */
+
     const buyerReceived =
       buyerAfter.sub(
         buyerBefore
@@ -597,26 +906,26 @@ async function runBuyTest(){
       );
 
 
-    const pairSent =
+    const grossPairSent =
       pairBefore.sub(
         pairAfter
       );
 
 
     /*
-      Exact expected tax:
+      Exact contract formula:
 
-      gross pair transfer * 250 / 10000
+      amount * 250 / 10000
     */
 
     const expectedTax =
-      pairSent
+      grossPairSent
         .mul(250)
         .div(10000);
 
 
     const expectedBuyer =
-      pairSent.sub(
+      grossPairSent.sub(
         expectedTax
       );
 
@@ -633,12 +942,45 @@ async function runBuyTest(){
       );
 
 
+    /*
+      Calculate displayed percentage.
+    */
+
+    let displayedPercent =
+      "0";
+
+
+    if(
+      !grossPairSent.eq(0)
+    ){
+
+      const scaledPercent =
+        taxCollected
+          .mul(1000000)
+          .div(grossPairSent);
+
+
+      displayedPercent =
+        (
+          Number(
+            scaledPercent.toString()
+          ) / 10000
+        ).toFixed(4);
+
+    }
+
+
+    /*
+      PASS
+    */
+
     if(
       taxPass &&
       buyerPass
     ){
 
       status.innerHTML = `
+
         <span class="good">
         V4 BUY TAX PASSED ✅
         </span>
@@ -649,10 +991,10 @@ async function runBuyTest(){
         Gross HIVE sent by pair:
         </strong>
 
-        <br>
+        <br><br>
 
         ${ethers.utils.formatUnits(
-          pairSent,
+          grossPairSent,
           18
         )} HIVE
 
@@ -662,7 +1004,7 @@ async function runBuyTest(){
         Buyer received:
         </strong>
 
-        <br>
+        <br><br>
 
         ${ethers.utils.formatUnits(
           buyerReceived,
@@ -675,7 +1017,7 @@ async function runBuyTest(){
         HIVE tax collected:
         </strong>
 
-        <br>
+        <br><br>
 
         ${ethers.utils.formatUnits(
           taxCollected,
@@ -685,15 +1027,25 @@ async function runBuyTest(){
         <br><br>
 
         <strong>
-        Expected 2.5% tax:
+        Expected tax:
         </strong>
 
-        <br>
+        <br><br>
 
         ${ethers.utils.formatUnits(
           expectedTax,
           18
         )} HIVE
+
+        <br><br>
+
+        <strong>
+        Measured tax rate:
+        </strong>
+
+        <br><br>
+
+        ${displayedPercent}%
 
         <br><br>
 
@@ -703,7 +1055,9 @@ async function runBuyTest(){
 
         <br><br>
 
+        <strong>
         STOP HERE.
+        </strong>
 
         <br><br>
 
@@ -711,24 +1065,28 @@ async function runBuyTest(){
 
         <br><br>
 
-        Send me a screenshot.
+        Send me a screenshot of this result.
+
       `;
+
 
     }else{
 
+
       status.innerHTML = `
+
         <span class="bad">
         BUY TAX CHECK FAILED ❌
         </span>
 
         <br><br>
 
-        Gross pair transfer:
+        Gross HIVE sent by pair:
 
-        <br>
+        <br><br>
 
         ${ethers.utils.formatUnits(
-          pairSent,
+          grossPairSent,
           18
         )} HIVE
 
@@ -736,7 +1094,7 @@ async function runBuyTest(){
 
         Buyer received:
 
-        <br>
+        <br><br>
 
         ${ethers.utils.formatUnits(
           buyerReceived,
@@ -745,9 +1103,9 @@ async function runBuyTest(){
 
         <br><br>
 
-        Actual tax:
+        Actual tax collected:
 
-        <br>
+        <br><br>
 
         ${ethers.utils.formatUnits(
           taxCollected,
@@ -758,7 +1116,7 @@ async function runBuyTest(){
 
         Expected tax:
 
-        <br>
+        <br><br>
 
         ${ethers.utils.formatUnits(
           expectedTax,
@@ -767,18 +1125,24 @@ async function runBuyTest(){
 
         <br><br>
 
+        <strong>
         STOP HERE.
+        </strong>
+
       `;
+
     }
 
 
   }catch(error){
+
 
     buyButton.disabled =
       false;
 
 
     status.innerHTML = `
+
       <span class="bad">
       BUY TEST FAILED ❌
       </span>
@@ -786,36 +1150,56 @@ async function runBuyTest(){
       <br><br>
 
       ${error.message}
+
     `;
+
   }
 
 }
+
 
 
 /* =========================================================
    WALLET CHANGES
    ========================================================= */
 
-if(window.ethereum){
+
+if(
+  typeof window.ethereum !==
+  "undefined"
+){
 
   window.ethereum.on(
+
     "accountsChanged",
+
     function(){
+
       location.reload();
+
     }
+
   );
 
 
   window.ethereum.on(
+
     "chainChanged",
+
     function(){
+
       location.reload();
+
     }
+
   );
 
 }
 
+
 </script>
 
+
 </body>
+
 </html>
