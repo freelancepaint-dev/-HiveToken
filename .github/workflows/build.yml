@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: hivetoken-build-main
+  cancel-in-progress: false
+
 jobs:
   compile:
     runs-on: ubuntu-latest
@@ -16,44 +20,99 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "22"
 
       - name: Install Solidity compiler
-        run: npm install solc@0.8.20
+        run: npm install --no-save solc@0.8.20
 
-      - name: Compile V4 and Test Receiver
+      - name: Compile V4 V5 and Test Receiver
         run: |
+          set -eu
           rm -rf build
           mkdir -p build
-          npx solcjs --bin --abi contracts/HiveToken.sol contracts/TestHiveReceiver.sol -o build
 
-      - name: Compile HiveToken V5
-        run: |
-          npx solcjs --bin --abi contracts/HiveTokenV5.sol -o build
+          npx solcjs --bin --abi \
+            contracts/HiveToken.sol \
+            contracts/TestHiveReceiver.sol \
+            contracts/HiveTokenV5.sol \
+            -o build
+
+          test -s build/contracts_HiveToken_sol_HiveToken.bin
+          test -s build/contracts_HiveToken_sol_HiveToken.abi
+
+          test -s build/contracts_TestHiveReceiver_sol_TestHiveReceiver.bin
+          test -s build/contracts_TestHiveReceiver_sol_TestHiveReceiver.abi
+
           test -s build/contracts_HiveTokenV5_sol_HiveTokenV5.bin
           test -s build/contracts_HiveTokenV5_sol_HiveTokenV5.abi
-          echo "HiveToken V5 compiled successfully."
 
-      - name: Create V4 deployment files
+          echo "All three contracts compiled successfully."
+
+      - name: Generate V4 deployment files
         run: |
+          set -eu
+
           HIVE_BIN=$(cat build/contracts_HiveToken_sol_HiveToken.bin)
           RECEIVER_BIN=$(cat build/contracts_TestHiveReceiver_sol_TestHiveReceiver.bin)
 
-          echo "window.HIVE_BYTECODE='0x${HIVE_BIN}';" > hive-bytecode.js
-          echo "window.TEST_HIVE_RECEIVER_BYTECODE='0x${RECEIVER_BIN}';" > test-hive-receiver-bytecode.js
+          printf "window.HIVE_BYTECODE='0x%s';\n" "$HIVE_BIN" > hive-bytecode.js
+          printf "window.TEST_HIVE_RECEIVER_BYTECODE='0x%s';\n" "$RECEIVER_BIN" > test-hive-receiver-bytecode.js
 
-      - name: Commit V4 deployment files
+          test -s hive-bytecode.js
+          test -s test-hive-receiver-bytecode.js
+
+      - name: Generate V5 deployment files
         run: |
+          set -eu
+
+          V5_BIN=$(cat build/contracts_HiveTokenV5_sol_HiveTokenV5.bin)
+
+          printf "window.HIVE_V5_BYTECODE='0x%s';\n" "$V5_BIN" > hive-v5-bytecode.js
+
+          cp build/contracts_HiveTokenV5_sol_HiveTokenV5.abi hive-v5-abi.json
+
+          test -s hive-v5-bytecode.js
+          test -s hive-v5-abi.json
+
+          echo "V5 deployment bytecode and ABI generated."
+
+      - name: Verify generated deployment files
+        run: |
+          set -eu
+
+          for file in \
+            hive-bytecode.js \
+            test-hive-receiver-bytecode.js \
+            hive-v5-bytecode.js \
+            hive-v5-abi.json
+          do
+            test -s "$file"
+            echo "Verified: $file"
+          done
+
+      - name: Commit deployment files
+        run: |
+          set -eu
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add hive-bytecode.js test-hive-receiver-bytecode.js
+          git add \
+            hive-bytecode.js \
+            test-hive-receiver-bytecode.js \
+            hive-v5-bytecode.js \
+            hive-v5-abi.json
 
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then
+            echo "No deployment file changes."
+            exit 0
+          fi
 
-          git commit -m "Update V4 deployment bytecode"
+          git commit -m "Generate V4 and V5 deployment artifacts"
           git push
