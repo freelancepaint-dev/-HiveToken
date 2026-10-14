@@ -3,8 +3,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HiveToken V5 — Testnet Deployment</title>
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+<title>HiveToken V5 Liquidity Setup</title>
 <style>
 *{box-sizing:border-box}
 body{
@@ -52,467 +53,599 @@ code{overflow-wrap:anywhere}
 <body>
 <main class="card">
 
-<h1>🐝 HiveToken V5 Deployment</h1>
+<h1>🐝 HiveToken V5 Liquidity Setup</h1>
 
 <div class="panel">
   <strong class="warn">
     BNB SMART CHAIN TESTNET ONLY
   </strong>
   <p>
-    Deploys a <strong>new</strong> HiveToken V5
-    contract. Existing V4 is not changed.
+    New V5 liquidity:
+    <br>
+    <strong>10,000 HIVE + 0.01 tBNB</strong>
   </p>
   <p>
-    No transaction is sent without your
-    wallet approval.
+    This page will create the pair if needed,
+    approve exactly 10,000 HIVE, and add
+    liquidity.
+  </p>
+  <p class="warn">
+    LP tokens will remain in your owner wallet.
+    They are NOT locked.
   </p>
 </div>
 
 <div class="panel">
-  <strong>Constructor argument 1 — Router</strong>
+  <strong>V5 contract</strong>
+  <p><code id="tokenAddress"></code></p>
+  <strong>Router</strong>
   <p><code id="routerAddress"></code></p>
-
-  <strong>Constructor argument 2 — Test Receiver</strong>
-  <p><code id="receiverAddress"></code></p>
 </div>
 
-<button id="connect" onclick="checkDeployment()">
-  1. Connect &amp; Check Deployment
+<button id="connect"
+onclick="connectAndCheck()">
+  1. Connect &amp; Check V5
 </button>
 
-<button id="deploy" onclick="deployV5()" disabled>
-  2. Deploy V5 on Testnet
+<button id="approve"
+onclick="approveHive()" disabled>
+  2. Approve 10,000 HIVE
 </button>
 
-<div id="status" class="panel" aria-live="polite">
-  Ready. Connect your owner wallet on
-  BNB Smart Chain Testnet.
+<button id="liquidity"
+onclick="addLiquidity()" disabled>
+  3. Add V5 Testnet Liquidity
+</button>
+
+<div id="status" class="panel"
+aria-live="polite">
+  Ready. Connect the V5 owner wallet.
 </div>
 
 <small>
-  After deployment: verify V5, set a meaningful
-  minimum funding BNB amount, create liquidity,
-  configure its correct pair, and test funding.
-  LP tokens must be secured separately.
-  Do not use mainnet funds.
+  No transaction is sent without wallet
+  approval. Stop after liquidity is confirmed.
+  Do not trade or lock the pair yet.
 </small>
 
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script src="./hive-v5-bytecode.js"></script>
 
 <script>
 'use strict';
 
+const TOKEN =
+'0xe1d3c5d7e66fd41b87913d5c6b5b519ccd691a0a';
+
 const ROUTER =
-  '0xd99d1c33f9fc3444f8101754abc46c52416550d1';
+'0xd99d1c33f9fc3444f8101754abc46c52416550d1';
 
-const RECEIVER =
-  '0xd22d8d7a8a3a3a7293168b5c83413060fd11ece1';
+const WBNB =
+'0xae13d989dac2f0debff460ac112a837c89baa7cd';
 
-const EXPECTED_WBNB =
-  '0xae13d989dac2f0debff460ac112a837c89baa7cd';
+const TOKEN_AMOUNT =
+ethers.utils.parseUnits('10000',18);
 
-const ABI = [
-  'constructor(address routerAddress,address payable hiveFundingAddress)',
-  'function owner() view returns(address)',
-  'function hiveAddress() view returns(address)',
-  'function router() view returns(address)',
-  'function pairLocked() view returns(bool)',
-  'function totalSupply() view returns(uint256)',
-  'function minimumFundingBnb() view returns(uint256)'
+const BNB_AMOUNT =
+ethers.utils.parseEther('0.01');
+
+const EXPECTED_SUPPLY =
+ethers.utils.parseUnits('1000000',18);
+
+const tokenABI = [
+ 'function owner() view returns(address)',
+ 'function balanceOf(address) view returns(uint256)',
+ 'function allowance(address,address) view returns(uint256)',
+ 'function approve(address,uint256) returns(bool)',
+ 'function totalSupply() view returns(uint256)',
+ 'function pair() view returns(address)',
+ 'function pairLocked() view returns(bool)',
+ 'function minimumFundingBnb() view returns(uint256)',
+ 'function router() view returns(address)',
+ 'function wrappedBNB() view returns(address)'
 ];
 
 const routerABI = [
-  'function WETH() view returns(address)',
-  'function factory() view returns(address)'
+ 'function factory() view returns(address)',
+ 'function WETH() view returns(address)',
+ 'function addLiquidityETH(address,uint256,uint256,uint256,address,uint256) payable returns(uint256,uint256,uint256)'
 ];
 
+const factoryABI = [
+ 'function getPair(address,address) view returns(address)',
+ 'function createPair(address,address) returns(address)'
+];
+
+const pairABI = [
+ 'function totalSupply() view returns(uint256)',
+ 'function balanceOf(address) view returns(uint256)',
+ 'function getReserves() view returns(uint112,uint112,uint32)'
+];
+
+let account = null;
+let busy = false;
+let liquiditySubmitted = false;
+
 const statusEl =
-  document.getElementById('status');
+document.getElementById('status');
 
-const deployButton =
-  document.getElementById('deploy');
+const approveBtn =
+document.getElementById('approve');
 
-let connected = null;
-let deploymentStarted = false;
+const liquidityBtn =
+document.getElementById('liquidity');
+
+document.getElementById('tokenAddress')
+.textContent = TOKEN;
 
 document.getElementById('routerAddress')
-  .textContent = ROUTER;
+.textContent = ROUTER;
 
-document.getElementById('receiverAddress')
-  .textContent = RECEIVER;
-
-function show(message, cls = '') {
-  statusEl.innerHTML =
-    '<span class="' + cls + '">' +
-    message +
-    '</span>';
+function show(html, cls=''){
+ statusEl.innerHTML =
+ '<div class="'+cls+'">'+html+'</div>';
 }
 
-function cleanError(error) {
-  return String(
-    error.reason ||
-    error.data?.message ||
-    error.message ||
-    error
-  ).replace(/[<>]/g, '');
+function errorText(e){
+ return String(
+  e.reason ||
+  e.data?.message ||
+  e.message ||
+  e
+ ).replace(/[<>]/g,'');
 }
 
-function getProvider() {
-  if (
-    !window.ethereum ||
-    !window.ethereum.request
-  ) {
-    throw Error(
-      'Open this page in your wallet browser.'
-    );
-  }
-
-  return new ethers.providers.Web3Provider(
-    window.ethereum,
-    'any'
+function getProvider(){
+ if(!window.ethereum?.request){
+  throw Error(
+   'Open this page in your wallet browser.'
   );
+ }
+ return new ethers.providers.Web3Provider(
+  window.ethereum,'any'
+ );
 }
 
-async function assertNetwork(p) {
-  const n = await p.getNetwork();
-
-  if (n.chainId !== 97) {
-    throw Error(
-      'Wrong network. Select BNB Smart Chain Testnet (chain ID 97).'
-    );
-  }
-}
-
-function getBytecode() {
-  const b = window.HIVE_V5_BYTECODE;
-
-  if (
-    typeof b !== 'string' ||
-    !/^0x[0-9a-fA-F]+$/.test(b) ||
-    b.length < 1000 ||
-    b.length % 2 !== 0
-  ) {
-    throw Error(
-      'V5 creation bytecode missing or invalid. Check hive-v5-bytecode.js in the repository root.'
-    );
-  }
-
-  return b;
-}
-
-async function verifyEnvironment(p) {
-  await assertNetwork(p);
-
-  const code = await Promise.all([
-    p.getCode(ROUTER),
-    p.getCode(RECEIVER)
-  ]);
-
-  if (code.some(c => c === '0x')) {
-    throw Error(
-      'Router or test receiver is not deployed on this network.'
-    );
-  }
-
-  const router = new ethers.Contract(
-    ROUTER,
-    routerABI,
-    p
+async function checkNetwork(p){
+ const network = await p.getNetwork();
+ if(network.chainId !== 97){
+  throw Error(
+   'Select BNB Smart Chain Testnet.'
   );
-
-  const [weth, factory] = await Promise.all([
-    router.WETH(),
-    router.factory()
-  ]);
-
-  if (
-    weth.toLowerCase() !== EXPECTED_WBNB
-  ) {
-    throw Error(
-      'Router wrapped BNB does not match the expected testnet address.'
-    );
-  }
-
-  if (
-    (await p.getCode(factory)) === '0x'
-  ) {
-    throw Error(
-      'Router factory contract missing.'
-    );
-  }
-
-  return factory;
+ }
 }
 
-async function checkDeployment() {
-  deployButton.disabled = true;
-  connected = null;
+async function getContracts(){
+ const p = getProvider();
+ await checkNetwork(p);
 
-  try {
-    if (deploymentStarted) {
-      throw Error(
-        'A deployment was already attempted on this page. Check your wallet history before trying again.'
-      );
-    }
+ const token = new ethers.Contract(
+  TOKEN,tokenABI,p
+ );
 
-    getBytecode();
+ const router = new ethers.Contract(
+  ROUTER,routerABI,p
+ );
 
-    const p = getProvider();
+ const [tokenCode,routerCode] =
+ await Promise.all([
+  p.getCode(TOKEN),
+  p.getCode(ROUTER)
+ ]);
 
-    await assertNetwork(p);
+ if(tokenCode==='0x' || routerCode==='0x'){
+  throw Error(
+   'V5 token or router contract not found.'
+  );
+ }
 
-    show(
-      'Requesting wallet connection…',
-      'warn'
-    );
+ const [factoryAddress,weth] =
+ await Promise.all([
+  router.factory(),
+  router.WETH()
+ ]);
 
-    const accounts = await p.send(
-      'eth_requestAccounts',
-      []
-    );
+ if(weth.toLowerCase()!==WBNB){
+  throw Error('Unexpected wrapped BNB.');
+ }
 
-    if (!accounts.length) {
-      throw Error(
-        'Wallet did not return an account.'
-      );
-    }
+ const factory = new ethers.Contract(
+  factoryAddress,factoryABI,p
+ );
 
-    const account =
-      ethers.utils.getAddress(accounts[0]);
-
-    show(
-      'Verifying testnet router, receiver and bytecode…',
-      'warn'
-    );
-
-    const factory =
-      await verifyEnvironment(p);
-
-    const bal =
-      await p.getBalance(account);
-
-    if (bal.isZero()) {
-      throw Error(
-        'Wallet has no testnet BNB for gas.'
-      );
-    }
-
-    connected = account;
-    deployButton.disabled = false;
-
-    show(
-      '<strong>CHECKS PASSED ✅</strong>' +
-      '<p>Deployer: ' + account + '</p>' +
-      '<p>Router factory: ' + factory + '</p>' +
-      '<p>Testnet BNB balance: ' +
-      ethers.utils.formatEther(bal) +
-      '</p>' +
-      '<p class="warn">Next step sends ONE contract deployment transaction. Review its gas cost in your wallet.</p>',
-      'good'
-    );
-
-  } catch (e) {
-    show(
-      'CHECK FAILED ❌<p>' +
-      cleanError(e) +
-      '</p>',
-      'bad'
-    );
-  }
+ return {p,token,router,factory};
 }
 
-async function deployV5() {
-  if (
-    deploymentStarted ||
-    !connected
-  ) {
-    return;
-  }
+async function verifyOwner(c){
+ if(!account){
+  throw Error('Connect wallet first.');
+ }
 
-  deployButton.disabled = true;
-  deploymentStarted = true;
+ const [
+  owner,supply,routerAddress,
+  wrapped,locked,minimum,
+  balance,bnbBalance
+ ] = await Promise.all([
+  c.token.owner(),
+  c.token.totalSupply(),
+  c.token.router(),
+  c.token.wrappedBNB(),
+  c.token.pairLocked(),
+  c.token.minimumFundingBnb(),
+  c.token.balanceOf(account),
+  c.p.getBalance(account)
+ ]);
 
-  try {
-    const p = getProvider();
+ if(owner.toLowerCase()!==account.toLowerCase()){
+  throw Error(
+   'Connected wallet is not the V5 owner.'
+  );
+ }
 
-    await verifyEnvironment(p);
+ if(!supply.eq(EXPECTED_SUPPLY)){
+  throw Error('Unexpected token supply.');
+ }
 
-    const accounts =
-      await p.listAccounts();
+ if(routerAddress.toLowerCase()!==ROUTER){
+  throw Error('Unexpected V5 router.');
+ }
 
-    if (
-      !accounts.length ||
-      accounts[0].toLowerCase() !==
-      connected.toLowerCase()
-    ) {
-      throw Error(
-        'Wallet account changed. Reload and reconnect.'
-      );
-    }
+ if(wrapped.toLowerCase()!==WBNB){
+  throw Error('Unexpected V5 wrapped BNB.');
+ }
 
-    const signer =
-      p.getSigner(connected);
+ if(locked){
+  throw Error(
+   'V5 pair is already locked. Stop.'
+  );
+ }
 
-    const bytecode =
-      getBytecode();
+ if(!minimum.isZero()){
+  throw Error(
+   'Minimum funding BNB already configured. Stop and review.'
+  );
+ }
 
-    const factory =
-      new ethers.ContractFactory(
-        ABI,
-        bytecode,
-        signer
-      );
+ if(balance.lt(TOKEN_AMOUNT)){
+  throw Error(
+   'Owner needs at least 10,000 HIVE.'
+  );
+ }
 
-    const txRequest =
-      factory.getDeployTransaction(
-        ROUTER,
-        RECEIVER
-      );
+ if(bnbBalance.lte(BNB_AMOUNT)){
+  throw Error(
+   'Need 0.01 tBNB plus gas.'
+  );
+ }
 
-    const gas =
-      await p.estimateGas({
-        ...txRequest,
-        from: connected
-      });
+ const pairAddress =
+ await c.factory.getPair(TOKEN,WBNB);
 
-    const balance =
-      await p.getBalance(connected);
-
-    const fee =
-      await p.getGasPrice();
-
-    if (
-      balance.lt(gas.mul(fee))
-    ) {
-      throw Error(
-        'Insufficient testnet BNB for estimated deployment gas.'
-      );
-    }
-
-    show(
-      'Estimated gas: ' +
-      gas.toString() +
-      '<p class="warn">Review the deployment request in your wallet. No BNB is being sent to the receiver.</p>',
-      'warn'
-    );
-
-    const contract =
-      await factory.deploy(
-        ROUTER,
-        RECEIVER,
-        {
-          gasLimit:
-            gas.mul(120).div(100)
-        }
-      );
-
-    show(
-      'Deployment submitted.' +
-      '<p>Transaction: <code>' +
-      contract.deployTransaction.hash +
-      '</code></p>' +
-      '<p>Waiting for confirmation. Do not submit another deployment.</p>',
-      'warn'
-    );
-
-    await contract.deployed();
-
-    const [
-      owner,
-      receiver,
-      router,
-      locked,
-      supply,
-      minimum
-    ] = await Promise.all([
-      contract.owner(),
-      contract.hiveAddress(),
-      contract.router(),
-      contract.pairLocked(),
-      contract.totalSupply(),
-      contract.minimumFundingBnb()
-    ]);
-
-    if (
-      owner.toLowerCase() !==
-        connected.toLowerCase() ||
-      receiver.toLowerCase() !==
-        RECEIVER ||
-      router.toLowerCase() !==
-        ROUTER ||
-      locked ||
-      !supply.eq(
-        ethers.utils.parseUnits(
-          '1000000',
-          18
-        )
-      ) ||
-      !minimum.isZero()
-    ) {
-      throw Error(
-        'Deployed contract state did not match expected initial values. Review the transaction before proceeding.'
-      );
-    }
-
-    show(
-      '<strong>V5 DEPLOYED &amp; VERIFIED ✅</strong>' +
-      '<p>New V5 address:<br><code>' +
-      contract.address +
-      '</code></p>' +
-      '<p>Transaction:<br><code>' +
-      contract.deployTransaction.hash +
-      '</code></p>' +
-      '<p>Supply: 1,000,000 HIVE<br>' +
-      'Pair: not yet configured<br>' +
-      'Minimum BNB funding: not yet configured</p>' +
-      '<strong class="warn">STOP HERE. Do not add liquidity or trade yet. Send me a screenshot of this result.</strong>',
-      'good'
-    );
-
-  } catch (e) {
-    show(
-      '<strong>DEPLOYMENT NOT CONFIRMED</strong>' +
-      '<p>' +
-      cleanError(e) +
-      '</p>' +
-      '<p class="warn">Do not retry until you check your wallet transaction history for a pending or successful deployment.</p>',
-      'bad'
-    );
-  }
-}
-
-if (
-  window.ethereum &&
-  window.ethereum.on
-) {
-  window.ethereum.on(
-    'accountsChanged',
-    () => {
-      connected = null;
-      deployButton.disabled = true;
-
-      show(
-        'Wallet changed. Reload the page and reconnect.',
-        'warn'
-      );
-    }
+ if(pairAddress !== ethers.constants.AddressZero){
+  const pair = new ethers.Contract(
+   pairAddress,pairABI,c.p
   );
 
-  window.ethereum.on(
-    'chainChanged',
-    () => {
-      connected = null;
-      deployButton.disabled = true;
+  const lpSupply = await pair.totalSupply();
 
-      show(
-        'Network changed. Reload the page and reconnect.',
-        'warn'
-      );
-    }
+  if(!lpSupply.isZero()){
+   throw Error(
+    'V5 pool already has liquidity. Stop to avoid adding liquidity twice.'
+   );
+  }
+ }
+
+ return pairAddress;
+}
+
+async function connectAndCheck(){
+ approveBtn.disabled = true;
+ liquidityBtn.disabled = true;
+
+ try{
+  if(busy || liquiditySubmitted){
+   throw Error(
+    'Transaction already in progress or submitted.'
+   );
+  }
+
+  const c = await getContracts();
+
+  const accounts = await c.p.send(
+   'eth_requestAccounts',[]
   );
+
+  if(!accounts.length){
+   throw Error('No wallet account returned.');
+  }
+
+  account =
+  ethers.utils.getAddress(accounts[0]);
+
+  const pairAddress =
+  await verifyOwner(c);
+
+  const allowance =
+  await c.token.allowance(account,ROUTER);
+
+  if(allowance.gte(TOKEN_AMOUNT)){
+   liquidityBtn.disabled = false;
+  }else{
+   approveBtn.disabled = false;
+  }
+
+  show(
+   '<strong>V5 CHECKS PASSED ✅</strong>'+
+   '<p>Owner:<br><code>'+account+'</code></p>'+
+   '<p>Pair:<br><code>'+
+   (pairAddress===ethers.constants.AddressZero
+    ? 'Not yet created'
+    : pairAddress)+
+   '</code></p>'+
+   '<p>Approval: '+
+   (allowance.gte(TOKEN_AMOUNT)
+    ? 'Already sufficient'
+    : 'Required')+
+   '</p>'+
+   '<p class="warn">Continue with the enabled button. Each transaction requires wallet confirmation.</p>',
+   'good'
+  );
+
+ }catch(e){
+  account=null;
+  show(
+   'CHECK FAILED ❌<p>'+errorText(e)+'</p>',
+   'bad'
+  );
+ }
+}
+
+async function approveHive(){
+ if(busy || !account) return;
+
+ busy=true;
+ approveBtn.disabled=true;
+ liquidityBtn.disabled=true;
+
+ try{
+  const c=await getContracts();
+  await verifyOwner(c);
+
+  const signer=c.p.getSigner(account);
+
+  const token=c.token.connect(signer);
+
+  const current =
+  await token.allowance(account,ROUTER);
+
+  if(current.gte(TOKEN_AMOUNT)){
+   liquidityBtn.disabled=false;
+   show('Approval already sufficient.','good');
+   return;
+  }
+
+  show(
+   'Waiting for wallet approval of exactly 10,000 HIVE…',
+   'warn'
+  );
+
+  const tx=await token.approve(
+   ROUTER,TOKEN_AMOUNT
+  );
+
+  show(
+   'Approval submitted.<p><code>'+
+   tx.hash+'</code></p>'+
+   'Waiting for confirmation…',
+   'warn'
+  );
+
+  const receipt=await tx.wait();
+
+  if(receipt.status!==1){
+   throw Error('Approval transaction failed.');
+  }
+
+  const approved=
+  await token.allowance(account,ROUTER);
+
+  if(!approved.gte(TOKEN_AMOUNT)){
+   throw Error(
+    'Allowance did not update as expected.'
+   );
+  }
+
+  liquidityBtn.disabled=false;
+
+  show(
+   '<strong>10,000 HIVE APPROVED ✅</strong>'+
+   '<p>Ready to add liquidity.</p>'+
+   '<p class="warn">Press button 3 once.</p>',
+   'good'
+  );
+
+ }catch(e){
+  show(
+   'APPROVAL NOT CONFIRMED ❌<p>'+
+   errorText(e)+'</p>'+
+   '<p>Check wallet history before retrying.</p>',
+   'bad'
+  );
+ }finally{
+  busy=false;
+ }
+}
+
+async function addLiquidity(){
+ if(busy || liquiditySubmitted || !account){
+  return;
+ }
+
+ busy=true;
+ liquidityBtn.disabled=true;
+ approveBtn.disabled=true;
+
+ try{
+  const c=await getContracts();
+  const pairAddress=await verifyOwner(c);
+
+  const allowance=
+  await c.token.allowance(account,ROUTER);
+
+  if(allowance.lt(TOKEN_AMOUNT)){
+   throw Error('Approve HIVE first.');
+  }
+
+  if(pairAddress===ethers.constants.AddressZero){
+   show(
+    'Creating the V5 HIVE/WBNB pair…',
+    'warn'
+   );
+
+   const tx=await c.factory
+    .connect(c.p.getSigner(account))
+    .createPair(TOKEN,WBNB);
+
+   show(
+    'Pair creation submitted.<p><code>'+
+    tx.hash+'</code></p>'+
+    'Waiting for confirmation…',
+    'warn'
+   );
+
+   const receipt=await tx.wait();
+
+   if(receipt.status!==1){
+    throw Error('Pair creation failed.');
+   }
+  }
+
+  const actualPair=
+  await c.factory.getPair(TOKEN,WBNB);
+
+  if(actualPair===ethers.constants.AddressZero){
+   throw Error('Pair creation not confirmed.');
+  }
+
+  const pair=new ethers.Contract(
+   actualPair,pairABI,c.p
+  );
+
+  if(!(await pair.totalSupply()).isZero()){
+   throw Error(
+    'Pair already funded. Do not duplicate liquidity.'
+   );
+  }
+
+  const router=c.router.connect(
+   c.p.getSigner(account)
+  );
+
+  const latest=
+  await c.p.getBlock('latest');
+
+  const deadline=latest.timestamp+1200;
+
+  const minTokens=
+  TOKEN_AMOUNT.mul(99).div(100);
+
+  const minBnb=
+  BNB_AMOUNT.mul(99).div(100);
+
+  show(
+   '<strong>ADD LIQUIDITY</strong>'+
+   '<p>10,000 HIVE + 0.01 tBNB</p>'+
+   '<p>Minimum accepted: 9,900 HIVE and 0.0099 tBNB.</p>'+
+   '<p class="warn">Confirm this single liquidity transaction in your wallet.</p>',
+   'warn'
+  );
+
+  liquiditySubmitted=true;
+
+  const tx=await router.addLiquidityETH(
+   TOKEN,
+   TOKEN_AMOUNT,
+   minTokens,
+   minBnb,
+   account,
+   deadline,
+   {value:BNB_AMOUNT}
+  );
+
+  show(
+   'Liquidity transaction submitted.'+
+   '<p><code>'+tx.hash+'</code></p>'+
+   'Waiting for confirmation. Do not submit again.',
+   'warn'
+  );
+
+  const receipt=await tx.wait();
+
+  if(receipt.status!==1){
+   throw Error(
+    'Liquidity transaction reverted.'
+   );
+  }
+
+  const lpBalance=
+  await pair.balanceOf(account);
+
+  const lpSupply=
+  await pair.totalSupply();
+
+  if(lpBalance.isZero() || lpSupply.isZero()){
+   throw Error(
+    'Transaction confirmed, but LP tokens were not detected. Stop and inspect.'
+   );
+  }
+
+  show(
+   '<strong>V5 LIQUIDITY ADDED ✅</strong>'+
+   '<p>V5 pair:<br><code>'+
+   actualPair+'</code></p>'+
+   '<p>LP tokens in owner wallet:<br>'+
+   ethers.utils.formatUnits(lpBalance,18)+
+   '</p>'+
+   '<p>Transaction:<br><code>'+
+   tx.hash+'</code></p>'+
+   '<p class="warn"><strong>STOP HERE.</strong>'+
+   ' LP tokens are not locked. Do not trade or configure the pair yet. Send me a screenshot.</p>',
+   'good'
+  );
+
+ }catch(e){
+  show(
+   '<strong>LIQUIDITY NOT CONFIRMED</strong>'+
+   '<p>'+errorText(e)+'</p>'+
+   '<p class="warn">Do not retry automatically. Check transaction history and send a screenshot.</p>',
+   'bad'
+  );
+ }finally{
+  busy=false;
+ }
+}
+
+if(window.ethereum?.on){
+ window.ethereum.on('accountsChanged',()=>{
+  account=null;
+  approveBtn.disabled=true;
+  liquidityBtn.disabled=true;
+  show(
+   'Wallet changed. Reload and reconnect.',
+   'warn'
+  );
+ });
+
+ window.ethereum.on('chainChanged',()=>{
+  account=null;
+  approveBtn.disabled=true;
+  liquidityBtn.disabled=true;
+  show(
+   'Network changed. Reload and reconnect.',
+   'warn'
+  );
+ });
 }
 </script>
 </body>
