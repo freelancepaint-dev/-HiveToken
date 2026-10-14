@@ -3,35 +3,48 @@
 pragma solidity ^0.8.20;
 
 /*
-    HiveToken V5 - TESTNET CANDIDATE
+    HiveToken V5 - REVISED TESTNET CANDIDATE
 
-    Supply: 1,000,000 HIVE
+    Fixed supply: 1,000,000 HIVE
     Buy tax: 2.5%
     Sell tax: 2.5%
-    Wallet transfer tax: 0%
+    Wallet-to-wallet tax: 0%
 
     Automatic funding threshold: 100 HIVE
+    Maximum automatic funding batch: 100 HIVE
 
-    Improvements over V4:
-    - Failed funding attempts do not automatically
-      revert the customer's sell.
-    - Funding success and failure are recorded.
-    - Swaps use a minimum output based on a
-      router quote and a slippage setting.
-    - Pair configuration is permanent.
+    Safety features:
+    - Failed funding attempts are caught so the
+      token's automatic funding logic does not
+      automatically revert an ordinary sell.
+    - Funding is attempted only when enough gas
+      is available.
+    - Each swap has a 5% maximum slippage limit
+      relative to the router's current quote.
+    - A separate minimum BNB output must be set
+      before the trading pair is locked.
+    - The pair must match the router's factory.
+    - Token transfers during funding are restricted.
+    - Funding outcomes are recorded on-chain.
 
     IMPORTANT:
-    This contract is not audited.
-    Router quotes are NOT independent price oracles.
-    Do not deploy to mainnet without further review.
+    - NOT AUDITED.
+    - AMM quotes are not independent price oracles.
+    - Real BnBeeHive crediting requires an
+      independent integration test.
+    - LP tokens are NOT locked by this contract.
+    - TESTNET FIRST. DO NOT DEPLOY TO MAINNET
+      WITHOUT FURTHER REVIEW.
 */
 
-interface IV5HiveReceiver {
+interface IV5FundingReceiver {
     function buyEggs(address ref) external payable;
 }
 
 interface IV5Router {
     function WETH() external pure returns (address);
+
+    function factory() external pure returns (address);
 
     function getAmountsOut(
         uint256 amountIn,
@@ -45,6 +58,18 @@ interface IV5Router {
         address to,
         uint256 deadline
     ) external;
+}
+
+interface IV5Factory {
+    function getPair(
+        address tokenA,
+        address tokenB
+    ) external view returns (address);
+}
+
+interface IV5Pair {
+    function token0() external view returns (address);
+    function token1() external view returns (address);
 }
 
 contract HiveTokenV5 {
@@ -69,22 +94,34 @@ contract HiveTokenV5 {
     uint256 public constant swapThreshold =
         100 * 10**18;
 
-    // Maximum permitted slippage: 5%.
-    // This is relative to the router's spot quote.
+    uint256 public constant MAX_SWAP_AMOUNT =
+        100 * 10**18;
+
     uint256 public constant MAX_SLIPPAGE_BPS = 500;
 
-    // Limit the gas consumed by a failed funding
-    // attempt so ordinary sells can continue.
     uint256 public constant FUNDING_GAS_LIMIT = 650_000;
 
+    uint256 public constant SELL_GAS_RESERVE = 150_000;
+
     address public immutable owner;
+
     address payable public immutable hiveAddress;
+
     IV5Router public immutable router;
 
+    address public immutable wrappedBNB;
+
+    address public immutable routerFactory;
+
     address public pair;
+
     bool public pairLocked;
 
     bool private swapping;
+
+    // Set this BEFORE locking the pair.
+    // Units are wei of native BNB.
+    uint256 public minimumFundingBnb;
 
     mapping(address => uint256) public balanceOf;
 
@@ -95,22 +132,26 @@ contract HiveTokenV5 {
 
     uint256 public successfulFundingCount;
     uint256 public failedFundingCount;
+    uint256 public skippedFundingCount;
+
     uint256 public totalHiveFunded;
     uint256 public totalBnbFunded;
 
     event Transfer(
         address indexed from,
         address indexed to,
-        uint256 amount
+        uint256 value
     );
 
     event Approval(
         address indexed tokenOwner,
         address indexed spender,
-        uint256 amount
+        uint256 value
     );
 
     event PairConfigured(address indexed pairAddress);
+
+    event MinimumFundingBnbConfigured(uint256 amount);
 
     event TaxCollected(
         address indexed from,
@@ -124,7 +165,7 @@ contract HiveTokenV5 {
 
     event FundingFailed(bytes reason);
 
-    event FundingSkippedLowGas(uint256 gasAvailable);
+    event FundingSkippedLowGas(uint256 availableGas);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
@@ -169,6 +210,29 @@ contract HiveTokenV5 {
 
         hiveAddress = hiveFundingAddress;
 
+        address weth = IV5Router(routerAddress).WETH();
+
+        address factoryAddress =
+            IV5Router(routerAddress).factory();
+
+        require(
+            weth != address(0),
+            "Zero wrapped BNB"
+        );
+
+        require(
+            factoryAddress != address(0),
+            "Zero factory"
+        );
+
+        require(
+            factoryAddress.code.length > 0,
+            "Factory not contract"
+        );
+
+        wrappedBNB = weth;
+        routerFactory = factoryAddress;
+
         isTaxExempt[msg.sender] = true;
         isTaxExempt[address(this)] = true;
 
@@ -181,13 +245,57 @@ contract HiveTokenV5 {
         );
     }
 
-    receive() external payable {}
+    receive() external payable {
+        require(
+            msg.sender == wrappedBNB ||
+            msg.sender == address(router),
+            "Unexpected native BNB"
+        );
+    }
+
+    /*
+        Configure an absolute BNB floor before
+        locking the trading pair.
+
+        Example:
+        0.0001 BNB = 100000000000000 wei
+
+        This is only an example, NOT a universal
+        safe setting. It must be selected using
+        actual testnet liquidity and swap quotes.
+
+        After pair locking, this value cannot
+        be changed.
+    */
+
+    function setMinimumFundingBnb(
+        uint256 amount
+    ) external onlyOwner {
+
+        require(!pairLocked, "Pair already locked");
+
+        require(amount > 0, "Minimum must be positive");
+
+        minimumFundingBnb = amount;
+
+        emit MinimumFundingBnbConfigured(amount);
+    }
+
+    /*
+        The pair must be the actual factory pair
+        for HIVE and the router's wrapped BNB.
+    */
 
     function setPair(
         address pairAddress
     ) external onlyOwner {
 
         require(!pairLocked, "Pair already locked");
+
+        require(
+            minimumFundingBnb > 0,
+            "Configure BNB minimum first"
+        );
 
         require(
             pairAddress != address(0),
@@ -199,9 +307,38 @@ contract HiveTokenV5 {
             "Pair not contract"
         );
 
+        address expectedPair =
+            IV5Factory(routerFactory).getPair(
+                address(this),
+                wrappedBNB
+            );
+
         require(
-            pairAddress != address(this),
-            "Invalid pair"
+            expectedPair != address(0),
+            "Factory pair missing"
+        );
+
+        require(
+            pairAddress == expectedPair,
+            "Incorrect factory pair"
+        );
+
+        address tokenA =
+            IV5Pair(pairAddress).token0();
+
+        address tokenB =
+            IV5Pair(pairAddress).token1();
+
+        require(
+            (
+                tokenA == address(this) &&
+                tokenB == wrappedBNB
+            ) ||
+            (
+                tokenB == address(this) &&
+                tokenA == wrappedBNB
+            ),
+            "Incorrect pair tokens"
         );
 
         pair = pairAddress;
@@ -216,6 +353,7 @@ contract HiveTokenV5 {
     ) external returns (bool) {
 
         _transfer(msg.sender, to, amount);
+
         return true;
     }
 
@@ -282,17 +420,37 @@ contract HiveTokenV5 {
             "Zero receiver"
         );
 
+        /*
+            While funding is in progress, only
+            the router may move this contract's
+            tokens directly into the configured
+            liquidity pair.
+
+            This blocks unexpected recursive
+            token movements during external calls.
+        */
+
+        if (swapping) {
+
+            require(
+                msg.sender == address(router) &&
+                from == address(this) &&
+                to == pair,
+                "Transfer blocked during funding"
+            );
+        }
+
         require(
             balanceOf[from] >= amount,
             "Insufficient balance"
         );
 
         /*
-            Funding is triggered on a sell only
-            after at least 100 HIVE has accumulated.
+            Attempt funding BEFORE processing
+            the current sell.
 
-            Failure is isolated in an external
-            self-call and caught below.
+            Only an already accumulated tax
+            balance can trigger funding.
         */
 
         if (
@@ -302,26 +460,7 @@ contract HiveTokenV5 {
             balanceOf[address(this)] >= swapThreshold
         ) {
 
-            if (
-                gasleft() >
-                FUNDING_GAS_LIMIT + 100_000
-            ) {
-
-                try this.executeFunding{
-                    gas: FUNDING_GAS_LIMIT
-                }() {
-                    // Success recorded inside.
-                } catch (bytes memory reason) {
-
-                    failedFundingCount += 1;
-
-                    emit FundingFailed(reason);
-                }
-
-            } else {
-
-                emit FundingSkippedLowGas(gasleft());
-            }
+            _attemptFunding();
         }
 
         uint256 taxAmount = 0;
@@ -378,10 +517,55 @@ contract HiveTokenV5 {
     }
 
     /*
-        External self-call permits try/catch
-        isolation of funding failures.
+        Isolate the funding attempt in a separate
+        external self-call.
 
-        Ordinary users cannot call this directly.
+        If the router or receiver reverts,
+        the funding subcall is rolled back.
+
+        The ordinary token transfer can then
+        continue, provided sufficient gas remains.
+    */
+
+    function _attemptFunding() internal {
+
+        uint256 available = gasleft();
+
+        if (
+            available <=
+            FUNDING_GAS_LIMIT + SELL_GAS_RESERVE
+        ) {
+
+            skippedFundingCount += 1;
+
+            emit FundingSkippedLowGas(available);
+
+            return;
+        }
+
+        try this.executeFunding{
+            gas: FUNDING_GAS_LIMIT
+        }() {
+
+            // Success counters are updated
+            // inside executeFunding().
+
+        } catch (bytes memory reason) {
+
+            failedFundingCount += 1;
+
+            emit FundingFailed(reason);
+        }
+    }
+
+    /*
+        Only the contract itself can call this.
+
+        Each successful funding attempt swaps
+        at most 100 HIVE.
+
+        Any extra accumulated tax stays in
+        the token contract for later attempts.
     */
 
     function executeFunding()
@@ -391,13 +575,27 @@ contract HiveTokenV5 {
 
         require(!swapping, "Already swapping");
 
-        uint256 tokenAmount =
+        require(pairLocked, "Pair not configured");
+
+        require(
+            minimumFundingBnb > 0,
+            "BNB minimum not configured"
+        );
+
+        uint256 availableTokens =
             balanceOf[address(this)];
 
         require(
-            tokenAmount >= swapThreshold,
+            availableTokens >= swapThreshold,
             "Below threshold"
         );
+
+        uint256 tokenAmount = availableTokens;
+
+        if (tokenAmount > MAX_SWAP_AMOUNT) {
+
+            tokenAmount = MAX_SWAP_AMOUNT;
+        }
 
         swapping = true;
 
@@ -405,13 +603,7 @@ contract HiveTokenV5 {
             new address[](2);
 
         path[0] = address(this);
-        path[1] = router.WETH();
-
-        /*
-            IMPORTANT:
-            This quote comes from the AMM itself.
-            It is NOT manipulation-resistant.
-        */
+        path[1] = wrappedBNB;
 
         uint256[] memory amounts =
             router.getAmountsOut(
@@ -421,7 +613,7 @@ contract HiveTokenV5 {
 
         require(
             amounts.length == 2,
-            "Invalid quote"
+            "Invalid router quote"
         );
 
         uint256 expectedBnb = amounts[1];
@@ -431,10 +623,29 @@ contract HiveTokenV5 {
             "Zero expected BNB"
         );
 
-        uint256 minimumBnb =
+        uint256 slippageMinimum =
             expectedBnb *
             (TAX_DENOMINATOR - MAX_SLIPPAGE_BPS) /
             TAX_DENOMINATOR;
+
+        /*
+            Use whichever minimum is higher:
+
+            1. 95% of the router's current quote.
+            2. The independently configured
+               minimumFundingBnb floor.
+
+            A manipulated router quote alone
+            cannot reduce the output below
+            the configured absolute floor.
+        */
+
+        uint256 minimumBnb = slippageMinimum;
+
+        if (minimumFundingBnb > minimumBnb) {
+
+            minimumBnb = minimumFundingBnb;
+        }
 
         require(
             minimumBnb > 0,
@@ -467,15 +678,31 @@ contract HiveTokenV5 {
 
         require(
             bnbReceived >= minimumBnb,
-            "Insufficient BNB received"
+            "BNB received below minimum"
         );
 
         /*
-            Call the existing BnBeeHive interface.
-            No modification to BnBeeHive.
+            Revoke any unused router allowance.
         */
 
-        IV5HiveReceiver(hiveAddress)
+        allowance[address(this)][address(router)] = 0;
+
+        emit Approval(
+            address(this),
+            address(router),
+            0
+        );
+
+        /*
+            This confirms a payable call can
+            be made, but does NOT independently
+            prove the real BnBeeHive credits
+            the intended beneficiary.
+
+            That requires a separate test.
+        */
+
+        IV5FundingReceiver(hiveAddress)
             .buyEggs{
                 value: bnbReceived
             }(
@@ -485,6 +712,7 @@ contract HiveTokenV5 {
         successfulFundingCount += 1;
 
         totalHiveFunded += tokenAmount;
+
         totalBnbFunded += bnbReceived;
 
         emit HiveFunded(
