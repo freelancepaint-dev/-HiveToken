@@ -3,8 +3,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HiveToken V4 Funding Test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HiveToken V5 Testnet Deployment</title>
 <style>
 *{box-sizing:border-box}
 body{
@@ -12,526 +12,409 @@ body{
   color:white;
   font-family:Arial,sans-serif;
   padding:18px;
+  margin:0;
 }
 .card{
-  max-width:650px;
-  margin:auto;
+  max-width:680px;
+  margin:20px auto;
   padding:22px;
+  background:#151a15;
   border:1px solid #394639;
   border-radius:18px;
-  background:#151a15;
 }
-h1{color:#ffd45c;line-height:1.2}
+h1{color:#ffd45c;line-height:1.25}
+h2{color:#ffd45c;font-size:20px}
 .box{
   background:#050705;
-  padding:18px;
-  margin-top:18px;
-  border-radius:14px;
-  line-height:1.8;
+  padding:16px;
+  border-radius:12px;
+  margin-top:16px;
+  line-height:1.7;
   overflow-wrap:anywhere;
 }
 button{
   display:block;
   width:100%;
-  margin-top:18px;
-  padding:20px;
+  padding:17px;
+  margin-top:15px;
   border:0;
   border-radius:12px;
   background:#ffd45c;
   color:#111;
-  font-size:18px;
+  font-size:17px;
   font-weight:bold;
 }
-button:disabled{opacity:.45}
+button:disabled{opacity:.4}
 .good{color:#55ef7a;font-weight:bold}
-.bad{color:#ff6666;font-weight:bold}
+.bad{color:#ff6969;font-weight:bold}
 .warn{color:#ffd45c;font-weight:bold}
+.small{font-size:13px;color:#c8d0c8}
 a{color:#ffd45c}
 </style>
 </head>
 <body>
-
 <div class="card">
 
-<h1>🐝 HiveToken V4 Automatic Funding Test</h1>
+<h1>🐝 HiveToken V5</h1>
+<h2>Testnet Deployment Preparation</h2>
 
 <div class="box">
-<strong>BNB SMART CHAIN TESTNET ONLY</strong>
-<p>Current expected tax balance:<br>
-<strong>100.319782409599926219 HIVE</strong></p>
-<p>Test sell: <strong>1 HIVE</strong></p>
-<p>This test will attempt the automatic tax swap and the Test Hive Receiver's buyEggs function.</p>
-<p class="warn">This is not a mainnet transaction.</p>
+  <span class="warn">BNB SMART CHAIN TESTNET ONLY</span>
+  <p>
+    V5 has compiled, but has not yet completed
+    its on-chain security and integration tests.
+  </p>
+  <p>
+    This page verifies the deployment environment.
+    It does not deploy automatically.
+  </p>
+  <p>
+    The existing V4 deployment remains separate.
+  </p>
 </div>
 
 <div class="box">
-<strong>HiveToken V4</strong>
-<p>0x305cecf060209f758b74dbef91758021f113c608</p>
-
-<strong>Test Hive Receiver</strong>
-<p>0xd22d8d7a8a3a3a7293168b5c83413060fd11ece1</p>
+  <strong>V5 configuration</strong>
+  <p>Token: Hive Token (HIVE)</p>
+  <p>Supply: 1,000,000 HIVE</p>
+  <p>Buy tax: 2.5%</p>
+  <p>Sell tax: 2.5%</p>
+  <p>Wallet transfer tax: 0%</p>
+  <p>Funding threshold: 100 HIVE</p>
+  <p>Maximum funding batch: 100 HIVE</p>
+  <p>
+    The BNB minimum must be configured
+    before the new pair is locked.
+  </p>
 </div>
 
-<button id="connect" onclick="connectWallet()">
-1. Connect Seller Wallet
+<button id="connectButton" onclick="connectWallet()">
+  1. Connect Deployment Wallet
 </button>
 
-<button id="test" onclick="runTest()" disabled>
-2. Sell 1 HIVE and Test Funding
+<button id="checkButton"
+  onclick="verifyEnvironment()" disabled>
+  2. Verify Testnet Contracts
 </button>
 
-<button id="verify" onclick="verifyResult()" disabled>
-3. Verify Receiver Again
+<button id="deployButton"
+  onclick="showDeploymentStatus()" disabled>
+  3. Review Deployment Readiness
 </button>
 
 <div id="status" class="box">
-Ready. Connect your non-owner seller wallet.
+  Ready. Connect your wallet to begin.
+</div>
+
+<div class="box small">
+  <strong>Router</strong>
+  <p>
+    0xd99d1c33f9fc3444f8101754abc46c52416550d1
+  </p>
+
+  <strong>Test Hive Receiver</strong>
+  <p>
+    0xd22d8d7a8a3a3a7293168b5c83413060fd11ece1
+  </p>
+
+  <strong>Existing V4 token — do not modify</strong>
+  <p>
+    0x305cecf060209f758b74dbef91758021f113c608
+  </p>
 </div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
 <script>
+"use strict";
 
-const TOKEN =
-"0x305cecf060209f758b74dbef91758021f113c608";
-
-const PAIR =
-"0x3f8016dea6df1323fe2bee493b15593a8a2b149e";
-
-const RECEIVER =
-"0xd22d8d7a8a3a3a7293168b5c83413060fd11ece1";
+const CHAIN_ID = "0x61";
 
 const ROUTER =
-"0xd99d1c33f9fc3444f8101754abc46c52416550d1";
+  "0xd99d1c33f9fc3444f8101754abc46c52416550d1";
 
-const WBNB =
-"0xae13d989dac2f0debff460ac112a837c89baa7cd";
+const RECEIVER =
+  "0xd22d8d7a8a3a3a7293168b5c83413060fd11ece1";
 
-const SELL_AMOUNT =
-ethers.utils.parseUnits("1",18);
+const EXPECTED_WBNB =
+  "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
-const THRESHOLD =
-ethers.utils.parseUnits("100",18);
+const EXPECTED_FACTORY =
+  "0x6725f303b657a9451d8ba641348b6761a6cc7a17";
 
-const tokenABI = [
- "function owner() view returns(address)",
- "function balanceOf(address) view returns(uint256)",
- "function allowance(address,address) view returns(uint256)",
- "function approve(address,uint256) returns(bool)",
- "function isTaxExempt(address) view returns(bool)",
- "function pair() view returns(address)",
- "function pairLocked() view returns(bool)",
- "function swapThreshold() view returns(uint256)",
- "function hiveAddress() view returns(address)",
- "function router() view returns(address)"
-];
-
-const receiverABI = [
- "function totalReceived() view returns(uint256)",
- "function callCount() view returns(uint256)",
- "function lastCaller() view returns(address)",
- "function lastReferral() view returns(address)",
- "function lastAmount() view returns(uint256)"
-];
-
-const routerABI = [
- "function WETH() view returns(address)",
- "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)"
-];
-
-let wallet = null;
-let provider = null;
 let account = null;
-let attempted = false;
-let baseline = null;
-let lastHash = null;
+let verified = false;
 
-function show(html){
- document.getElementById("status").innerHTML=html;
+function statusBox(message){
+  document.getElementById("status").innerHTML = message;
 }
 
-function fmt(v){
- return ethers.utils.formatUnits(v,18);
+function walletProvider(){
+  if(
+    typeof window.ethereum === "undefined" ||
+    typeof window.ethereum.request !== "function"
+  ){
+    throw new Error(
+      "Wallet not detected. Open this page inside your wallet browser."
+    );
+  }
+
+  return window.ethereum;
 }
 
-function requireWallet(){
- if(!window.ethereum ||
-    typeof window.ethereum.request!=="function"){
-  throw new Error("Open this page inside your wallet browser.");
- }
- return window.ethereum;
+function ethersProvider(){
+  return new ethers.providers.Web3Provider(
+    walletProvider()
+  );
 }
 
-async function networkCheck(){
- const chain=await requireWallet().request({
-   method:"eth_chainId"
- });
- if(chain.toLowerCase()!=="0x61"){
-  throw new Error("Switch to BSC Testnet (chain 97).");
- }
+async function requireTestnet(){
+  const chainId = await walletProvider().request({
+    method:"eth_chainId"
+  });
+
+  if(chainId.toLowerCase() !== CHAIN_ID){
+    throw new Error(
+      "Wrong network. Switch to BNB Smart Chain Testnet (chain ID 97)."
+    );
+  }
 }
 
-function token(signer=false){
- return new ethers.Contract(
-  TOKEN,tokenABI,
-  signer?provider.getSigner():provider
- );
-}
+function resetVerification(){
+  verified = false;
 
-function receiver(){
- return new ethers.Contract(
-  RECEIVER,receiverABI,provider
- );
-}
-
-function router(signer=false){
- return new ethers.Contract(
-  ROUTER,routerABI,
-  signer?provider.getSigner():provider
- );
-}
-
-async function checkConfiguration(){
-
- await networkCheck();
-
- const t=token();
- const r=receiver();
-
- const [
-  owner,
-  balance,
-  exempt,
-  pair,
-  locked,
-  threshold,
-  hive,
-  configuredRouter,
-  routerWBNB,
-  taxBalance,
-  received,
-  count,
-  receiverCode
- ]=await Promise.all([
-  t.owner(),
-  t.balanceOf(account),
-  t.isTaxExempt(account),
-  t.pair(),
-  t.pairLocked(),
-  t.swapThreshold(),
-  t.hiveAddress(),
-  t.router(),
-  router().WETH(),
-  t.balanceOf(TOKEN),
-  r.totalReceived(),
-  r.callCount(),
-  provider.getCode(RECEIVER)
- ]);
-
- if(account.toLowerCase()===owner.toLowerCase()){
-  throw new Error("Use the non-owner seller wallet.");
- }
-
- if(exempt){
-  throw new Error("Seller wallet is tax exempt.");
- }
-
- if(pair.toLowerCase()!==PAIR.toLowerCase() || !locked){
-  throw new Error("V4 pair configuration failed.");
- }
-
- if(hive.toLowerCase()!==RECEIVER.toLowerCase()){
-  throw new Error("Wrong Hive funding receiver.");
- }
-
- if(configuredRouter.toLowerCase()!==ROUTER.toLowerCase()){
-  throw new Error("Wrong router configured.");
- }
-
- if(routerWBNB.toLowerCase()!==WBNB.toLowerCase()){
-  throw new Error("Router WBNB mismatch.");
- }
-
- if(!threshold.eq(THRESHOLD)){
-  throw new Error("Unexpected tax swap threshold.");
- }
-
- if(taxBalance.lt(THRESHOLD)){
-  throw new Error("Tax balance is below 100 HIVE. Stop.");
- }
-
- if(balance.lt(SELL_AMOUNT)){
-  throw new Error("Seller wallet needs at least 1 HIVE.");
- }
-
- if(receiverCode==="0x"){
-  throw new Error("Test receiver has no deployed code.");
- }
-
- return {
-  balance,taxBalance,received,count
- };
+  document.getElementById("checkButton").disabled = true;
+  document.getElementById("deployButton").disabled = true;
 }
 
 async function connectWallet(){
+  try{
+    resetVerification();
 
- try{
+    await requireTestnet();
 
-  document.getElementById("test").disabled=true;
+    const accounts = await walletProvider().request({
+      method:"eth_requestAccounts"
+    });
 
-  await networkCheck();
+    if(!accounts || accounts.length === 0){
+      throw new Error("No wallet account returned.");
+    }
 
-  const accounts=await requireWallet().request({
-   method:"eth_requestAccounts"
-  });
+    account = ethers.utils.getAddress(accounts[0]);
 
-  if(!accounts.length){
-   throw new Error("No account returned.");
+    document.getElementById("checkButton").disabled = false;
+
+    const balance = await ethersProvider().getBalance(account);
+
+    statusBox(`
+      <span class="good">WALLET CONNECTED ✅</span>
+      <p><strong>Address:</strong></p>
+      <p>${account}</p>
+      <p><strong>Testnet BNB balance:</strong></p>
+      <p>${ethers.utils.formatEther(balance)} tBNB</p>
+      <p>Next: tap button 2 to verify the router and receiver.</p>
+    `);
+
+  }catch(error){
+    account = null;
+    resetVerification();
+
+    statusBox(`
+      <span class="bad">CONNECTION CHECK FAILED</span>
+      <p>${escapeHtml(error.message)}</p>
+    `);
   }
-
-  account=accounts[0];
-
-  provider=new ethers.providers.Web3Provider(
-   requireWallet()
-  );
-
-  const c=await checkConfiguration();
-
-  baseline={
-   received:c.received,
-   count:c.count
-  };
-
-  document.getElementById("test").disabled=attempted;
-
-  show(`
-   <span class="good">PRE-TEST CHECKS PASSED ✅</span>
-   <p><strong>Seller:</strong><br>${account}</p>
-   <p><strong>Seller HIVE:</strong><br>${fmt(c.balance)}</p>
-   <p><strong>Accumulated tax:</strong><br>${fmt(c.taxBalance)} HIVE</p>
-   <p><strong>Receiver total before:</strong><br>${fmt(c.received)} tBNB</p>
-   <p><strong>Receiver calls before:</strong><br>${c.count.toString()}</p>
-   <p class="warn">Button 2 will request an approval if needed, then request a 1-HIVE sell. Each transaction needs separate wallet confirmation.</p>
-   <p>Press button 2 once only.</p>
-  `);
-
- }catch(e){
-
-  document.getElementById("test").disabled=true;
-  show(`<span class="bad">CHECK FAILED ❌</span><p>${e.message}</p>`);
-
- }
 }
 
-async function runTest(){
+async function verifyEnvironment(){
+  try{
+    if(!account){
+      throw new Error("Connect wallet first.");
+    }
 
- if(attempted)return;
+    await requireTestnet();
 
- attempted=true;
+    const provider = ethersProvider();
 
- document.getElementById("test").disabled=true;
+    const routerCode = await provider.getCode(ROUTER);
+    const receiverCode = await provider.getCode(RECEIVER);
 
- try{
+    if(routerCode === "0x"){
+      throw new Error("Router contract not found.");
+    }
 
-  const c=await checkConfiguration();
+    if(receiverCode === "0x"){
+      throw new Error("Test receiver contract not found.");
+    }
 
-  baseline={
-   received:c.received,
-   count:c.count
-  };
+    const router = new ethers.Contract(
+      ROUTER,
+      [
+        "function WETH() view returns(address)",
+        "function factory() view returns(address)"
+      ],
+      provider
+    );
 
-  const t=token(true);
+    const weth = await router.WETH();
+    const factory = await router.factory();
 
-  const currentAllowance=await t.allowance(
-   account,ROUTER
-  );
+    if(
+      weth.toLowerCase() !== EXPECTED_WBNB.toLowerCase()
+    ){
+      throw new Error("Unexpected wrapped BNB address.");
+    }
 
-  if(currentAllowance.lt(SELL_AMOUNT)){
+    if(
+      factory.toLowerCase() !== EXPECTED_FACTORY.toLowerCase()
+    ){
+      throw new Error("Unexpected factory address.");
+    }
 
-   show(`
-    <span class="warn">APPROVAL REQUIRED</span>
-    <p>Approve exactly 1 HIVE for the testnet router.</p>
-    <p>This approval is not the sell.</p>
-   `);
+    const factoryCode = await provider.getCode(factory);
 
-   const approval=await t.approve(
-    ROUTER,SELL_AMOUNT
-   );
+    if(factoryCode === "0x"){
+      throw new Error("Factory contract not found.");
+    }
 
-   show(`
-    <span class="warn">WAITING FOR APPROVAL</span>
-    <p>${approval.hash}</p>
-   `);
+    const chain = await provider.getNetwork();
 
-   const approvalReceipt=await approval.wait();
+    if(chain.chainId !== 97){
+      throw new Error("Unexpected network.");
+    }
 
-   if(approvalReceipt.status!==1){
-    throw new Error("Approval transaction failed.");
-   }
+    verified = true;
+
+    document.getElementById("deployButton").disabled = false;
+
+    statusBox(`
+      <span class="good">
+        TESTNET ENVIRONMENT VERIFIED ✅
+      </span>
+
+      <p>Chain ID: 97</p>
+      <p>Router contract: verified present</p>
+      <p>Wrapped BNB address: matches</p>
+      <p>Factory address: matches</p>
+      <p>Test receiver contract: verified present</p>
+
+      <p class="warn">
+        This does not verify receiver accounting
+        or the V5 bytecode.
+      </p>
+
+      <p>
+        Tap button 3 to review the remaining
+        deployment requirements.
+      </p>
+    `);
+
+  }catch(error){
+    verified = false;
+
+    document.getElementById("deployButton").disabled = true;
+
+    statusBox(`
+      <span class="bad">VERIFICATION FAILED ❌</span>
+      <p>${escapeHtml(error.message)}</p>
+      <p>Stop here and send a screenshot.</p>
+    `);
   }
-
-  const latest=await provider.getBlock("latest");
-
-  const deadline=latest.timestamp+1200;
-
-  show(`
-   <span class="warn">READY TO SELL 1 HIVE</span>
-   <p>Your wallet will request the sell transaction.</p>
-   <p>It will also trigger the accumulated tax swap.</p>
-   <p>Review the transaction before confirming.</p>
-  `);
-
-  const tx=await router(true)
-   .swapExactTokensForETHSupportingFeeOnTransferTokens(
-    SELL_AMOUNT,
-    0,
-    [TOKEN,WBNB],
-    account,
-    deadline
-   );
-
-  lastHash=tx.hash;
-
-  document.getElementById("verify").disabled=false;
-
-  show(`
-   <span class="warn">SELL SUBMITTED</span>
-   <p>${tx.hash}</p>
-   <p>Waiting for confirmation...</p>
-  `);
-
-  const receipt=await tx.wait();
-
-  if(receipt.status!==1){
-   throw new Error("Sell transaction reverted.");
-  }
-
-  await verifyResult();
-
- }catch(e){
-
-  document.getElementById("verify").disabled=
-   !lastHash;
-
-  show(`
-   <span class="bad">TEST STOPPED ❌</span>
-   <p>${e.message}</p>
-   ${lastHash?`<p>Transaction:<br>${lastHash}</p>`:""}
-   <p><strong>Do not repeat the sell.</strong></p>
-   <p>Send me a screenshot.</p>
-  `);
-
- }
 }
 
-async function verifyResult(){
-
- try{
-
-  if(!provider || !baseline){
-   throw new Error("Connect the wallet first.");
+function showDeploymentStatus(){
+  if(!verified){
+    statusBox(`
+      <span class="bad">NOT VERIFIED</span>
+      <p>Complete button 2 first.</p>
+    `);
+    return;
   }
 
-  await networkCheck();
+  statusBox(`
+    <span class="good">
+      DEPLOYMENT ENVIRONMENT READY ✅
+    </span>
 
-  const r=receiver();
+    <p>
+      Wallet and testnet infrastructure checks passed.
+    </p>
 
-  const [
-   received,
-   count,
-   caller,
-   referral,
-   amount,
-   remaining
-  ]=await Promise.all([
-   r.totalReceived(),
-   r.callCount(),
-   r.lastCaller(),
-   r.lastReferral(),
-   r.lastAmount(),
-   token().balanceOf(TOKEN)
-  ]);
+    <p class="warn">
+      V5 HAS NOT BEEN DEPLOYED.
+    </p>
 
-  const receivedMore=received.gt(baseline.received);
-  const countMore=count.gt(baseline.count);
+    <strong>Still required:</strong>
 
-  const correctCaller=
-   caller.toLowerCase()===TOKEN.toLowerCase();
+    <p>
+      1. Verify the compiled V5 creation bytecode
+      matches the saved Solidity source.
+    </p>
 
-  const correctReferral=
-   referral.toLowerCase()===
-   ethers.constants.AddressZero.toLowerCase();
+    <p>
+      2. Review constructor arguments and gas estimate.
+    </p>
 
-  const passed=
-   receivedMore &&
-   countMore &&
-   correctCaller &&
-   correctReferral;
+    <p>
+      3. Deploy a fresh V5 contract on testnet.
+    </p>
 
-  show(`
-   <span class="${passed?"good":"bad"}">
-    ${passed?
-     "V4 AUTOMATIC FUNDING VERIFIED ✅":
-     "FUNDING NOT FULLY VERIFIED ❌"}
-   </span>
+    <p>
+      4. Configure a meaningful minimum BNB output.
+    </p>
 
-   <p><strong>Receiver BNB before:</strong><br>
-   ${fmt(baseline.received)} tBNB</p>
+    <p>
+      5. Create and fund the new liquidity pair,
+      then lock the pair configuration.
+    </p>
 
-   <p><strong>Receiver BNB after:</strong><br>
-   ${fmt(received)} tBNB</p>
+    <p>
+      6. Test buys, sells, funding failures,
+      and successful receiver funding.
+    </p>
 
-   <p><strong>Receiver call count before:</strong><br>
-   ${baseline.count.toString()}</p>
+    <p>
+      7. Separately verify real BnBeeHive accounting
+      and arrange LP token custody or locking.
+    </p>
 
-   <p><strong>Receiver call count after:</strong><br>
-   ${count.toString()}</p>
+    <p class="warn">
+      STOP HERE. No wallet transaction is required.
+    </p>
 
-   <p><strong>Last BNB received:</strong><br>
-   ${fmt(amount)} tBNB</p>
-
-   <p><strong>Last caller:</strong><br>${caller}</p>
-
-   <p><strong>Last referral:</strong><br>${referral}</p>
-
-   <p><strong>Remaining HIVE tax balance:</strong><br>
-   ${fmt(remaining)} HIVE</p>
-
-   ${lastHash?`
-    <p><a href="https://testnet.bscscan.com/tx/${lastHash}"
-    target="_blank">View transaction on BscScan</a></p>
-   `:""}
-
-   <p><strong>STOP HERE.</strong></p>
-   <p>Do not sell again.</p>
-   <p>Send me a screenshot of this result.</p>
+    <p>
+      Send me a screenshot of this result.
+    </p>
   `);
-
- }catch(e){
-
-  show(`
-   <span class="bad">VERIFICATION ERROR ❌</span>
-   <p>${e.message}</p>
-   <p>Do not repeat the sell.</p>
-   <p>Send me a screenshot.</p>
-  `);
-
- }
 }
 
-if(window.ethereum &&
-   typeof window.ethereum.on==="function"){
-
- window.ethereum.on("accountsChanged",()=>{
-  location.reload();
- });
-
- window.ethereum.on("chainChanged",()=>{
-  location.reload();
- });
+function escapeHtml(value){
+  return String(value)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 }
 
+if(typeof window.ethereum !== "undefined"){
+  if(typeof window.ethereum.on === "function"){
+    window.ethereum.on("accountsChanged",function(){
+      account = null;
+      resetVerification();
+      statusBox("Wallet changed. Reconnect to continue.");
+    });
+
+    window.ethereum.on("chainChanged",function(){
+      account = null;
+      resetVerification();
+      statusBox("Network changed. Reconnect to continue.");
+    });
+  }
+}
 </script>
 </body>
 </html>
