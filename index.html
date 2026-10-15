@@ -3,15 +3,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width, initial-scale=1">
-<title>HiveToken V5 Liquidity Simulation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HiveToken V5 — Approval & Simulation</title>
 <style>
 *{box-sizing:border-box}
 body{
  margin:0;padding:16px;background:#0b100d;
  color:#f5f6f2;font:16px Arial,sans-serif;
- line-height:1.55
+ line-height:1.6
 }
 main{
  max-width:680px;margin:auto;padding:20px;
@@ -19,19 +18,19 @@ main{
  border-radius:18px
 }
 h1{color:#ffd45c;margin:0;font-size:27px}
-h2{font-size:20px;margin:0 0 12px}
+h2{font-size:21px;margin:0 0 12px}
 .panel{
- background:#080d09;padding:17px;
- border-radius:13px;margin:16px 0;
+ background:#080d09;padding:18px;
+ border-radius:14px;margin:16px 0;
  overflow-wrap:anywhere
 }
 button{
- display:block;width:100%;padding:17px 12px;
- margin:12px 0;background:#ffd45c;
+ display:block;width:100%;padding:17px 10px;
+ margin:13px 0;background:#ffd45c;
  border:0;border-radius:12px;
  color:#151515;font-size:17px;font-weight:bold
 }
-button:disabled{opacity:.4}
+button:disabled{opacity:.38}
 .good{color:#65f391}
 .bad{color:#ff7979}
 .warn{color:#ffd45c}
@@ -40,14 +39,7 @@ hr{
  border:0;border-top:1px solid #364438;
  margin:15px 0
 }
-code{
- font-size:13px;
- overflow-wrap:anywhere
-}
-.value{
- margin:5px 0 12px;
- overflow-wrap:anywhere
-}
+.value{margin:5px 0 12px;overflow-wrap:anywhere}
 small{color:#bdc5bd}
 </style>
 </head>
@@ -55,18 +47,24 @@ small{color:#bdc5bd}
 <main>
 
 <h1>🐝 HiveToken V5</h1>
-<p>Liquidity Simulation — BSC Testnet</p>
+<p>Approval & Liquidity Simulation</p>
 
 <div class="panel">
-<strong class="warn">READ-ONLY TEST</strong>
-<p>
-This page does not approve tokens,
-add liquidity, deploy contracts,
-or send transactions.
+<h2>Planned Liquidity</h2>
+<p><strong>10,000 HIVE + 0.01 tBNB</strong></p>
+<p class="warn">
+Step 4 sends a real approval transaction
+on BSC Testnet. MetaMask will ask you
+to confirm it.
 </p>
 <p>
-Planned liquidity:
-<strong>10,000 HIVE + 0.01 tBNB</strong>
+Approval allows the specified router
+to spend up to 10,000 HIVE.
+It does not add liquidity by itself.
+</p>
+<p class="good">
+The actual Add Liquidity transaction
+remains locked.
 </p>
 </div>
 
@@ -79,62 +77,87 @@ Planned liquidity:
 </button>
 
 <button id="check">
-3. Run Liquidity Preflight
+3. Check Wallet & Contract
+</button>
+
+<button id="approve" disabled>
+4. Approve Exactly 10,000 HIVE
+</button>
+
+<button id="simulate" disabled>
+5. Simulate Liquidity (Read-Only)
+</button>
+
+<button disabled>
+6. Add Liquidity — LOCKED
 </button>
 
 <div class="panel">
-<h2>Wallet & Token</h2>
-<strong>Network</strong>
-<div id="network" class="muted">Not checked</div>
-<hr>
+<h2>Wallet</h2>
+
 <strong>Account</strong>
-<div id="account" class="muted">Not connected</div>
+<div id="account" class="value muted">Not connected</div>
+
+<hr>
+<strong>Network</strong>
+<div id="network" class="value muted">Not checked</div>
+
 <hr>
 <strong>HIVE balance</strong>
-<div id="hive" class="muted">Not checked</div>
+<div id="hive" class="value muted">Not checked</div>
+
 <hr>
 <strong>tBNB balance</strong>
-<div id="bnb" class="muted">Not checked</div>
+<div id="bnb" class="value muted">Not checked</div>
+
 <hr>
 <strong>Router allowance</strong>
-<div id="allowance" class="muted">Not checked</div>
+<div id="allowance" class="value muted">Not checked</div>
 </div>
 
 <div class="panel">
-<h2>V5 Liquidity Settings</h2>
-<strong>Token identity</strong>
-<div id="identity" class="muted">Not checked</div>
+<h2>Contract Checks</h2>
+
+<strong>Token</strong>
+<div id="identity" class="value muted">Not checked</div>
+
 <hr>
-<strong>Configured router</strong>
-<div id="router" class="muted">Not checked</div>
+<strong>Token router</strong>
+<div id="router" class="value muted">Not checked</div>
+
 <hr>
 <strong>Pair lock</strong>
-<div id="pairLock" class="muted">Not checked</div>
+<div id="lock" class="value muted">Not checked</div>
+
 <hr>
 <strong>Minimum funding BNB</strong>
-<div id="minimum" class="muted">Not checked</div>
+<div id="minimum" class="value muted">Not checked</div>
+
 <hr>
-<strong>Router wrapped BNB</strong>
-<div id="wrapped" class="muted">Not checked</div>
+<strong>Wrapped BNB</strong>
+<div id="wrapped" class="value muted">Not checked</div>
+
+<hr>
+<strong>Existing pair</strong>
+<div id="pair" class="value muted">Not checked</div>
 </div>
 
 <div class="panel">
-<h2>PancakeSwap Pair</h2>
-<strong>Pair address</strong>
-<div id="pair" class="muted">Not checked</div>
-<hr>
-<strong>Pair status</strong>
-<div id="pairStatus" class="muted">Not checked</div>
+<h2>Approval Transaction</h2>
+<div id="approvalStatus" class="warn">
+Not submitted.
+</div>
 </div>
 
 <div class="panel">
 <h2>Liquidity Simulation</h2>
-<strong>Router call</strong>
-<div id="simulation" class="muted">Not checked</div>
+<div id="simulation" class="muted">
+Not attempted.
+</div>
 <hr>
-<strong>Overall result</strong>
+<strong>Overall Result</strong>
 <div id="result" class="warn">
-Run the preflight first.
+Run Step 3 first.
 </div>
 </div>
 
@@ -144,17 +167,15 @@ Run the preflight first.
 </div>
 
 <button id="copy">
-Copy Preflight Report
+Copy Report
 </button>
 
-<p>
-<small>
-A successful simulation does not guarantee
-a later transaction will succeed.
-Network state, allowances, balances,
-and gas conditions may change.
-</small>
-</p>
+<p><small>
+Never approve a transaction unless
+MetaMask displays the intended token,
+spender and amount. No liquidity
+transaction can be sent by this page.
+</small></p>
 
 </main>
 
@@ -172,56 +193,55 @@ const ROUTER =
 const WBNB =
 "0xae13d989dac2f0debff460ac112a837c89baa7cd";
 
-const CHAIN = "0x61";
+const AMOUNT_HIVE="10000";
+const AMOUNT_BNB="0.01";
+const CHAIN_ID=97;
+const CHAIN_HEX="0x61";
 
-const HIVE_AMOUNT = "10000";
-const BNB_AMOUNT = "0.01";
-
-const TOKEN_ABI = [
+const TOKEN_ABI=[
  "function name() view returns (string)",
  "function symbol() view returns (string)",
  "function decimals() view returns (uint8)",
  "function balanceOf(address) view returns (uint256)",
  "function allowance(address,address) view returns (uint256)",
+ "function approve(address,uint256) returns (bool)",
  "function router() view returns (address)",
  "function pairLocked() view returns (bool)",
  "function minimumFundingBnb() view returns (uint256)"
 ];
 
-const ROUTER_ABI = [
+const ROUTER_ABI=[
  "function WETH() view returns (address)",
  "function factory() view returns (address)",
  "function addLiquidityETH(address,uint256,uint256,uint256,address,uint256) payable returns (uint256,uint256,uint256)"
 ];
 
-const FACTORY_ABI = [
+const FACTORY_ABI=[
  "function getPair(address,address) view returns (address)"
 ];
 
-const PAIR_ABI = [
- "function token0() view returns (address)",
- "function token1() view returns (address)",
- "function getReserves() view returns (uint112,uint112,uint32)"
-];
-
-const $ = id => document.getElementById(id);
+const $=id=>document.getElementById(id);
 
 let busy=false;
+let verified=false;
+let approved=false;
+let walletAddress="";
 let report=[];
 
 function show(id,message,type="muted"){
  $(id).textContent=message;
- $(id).className=type;
+ $(id).className="value "+type;
 }
 
 function log(message){
  const line=document.createElement("div");
- line.textContent="["+new Date().toLocaleTimeString()+"] "+message;
+ line.textContent=
+  "["+new Date().toLocaleTimeString()+"] "+message;
  $("log").prepend(line);
  report.push(message);
 }
 
-function errorText(e){
+function err(e){
  return String(
   e?.reason ||
   e?.error?.message ||
@@ -233,49 +253,46 @@ function errorText(e){
 
 function provider(){
  if(!window.ethereum?.request){
-  throw Error(
-   "Open this page in MetaMask's browser."
-  );
+  throw Error("Open this page in MetaMask's browser.");
  }
  if(!window.ethers){
-  throw Error(
-   "Ethers library failed to load."
-  );
+  throw Error("Ethers library failed to load.");
  }
  return new ethers.providers.Web3Provider(
   window.ethereum,"any"
  );
 }
 
-function setBusy(value){
- busy=value;
- for(const id of ["connect","switch","check"]){
-  $(id).disabled=value;
- }
+function buttons(){
+ $("connect").disabled=busy;
+ $("switch").disabled=busy;
+ $("check").disabled=busy;
+ $("approve").disabled=
+  busy || !verified || approved;
+ $("simulate").disabled=
+  busy || !verified || !approved;
 }
 
-function reset(){
- for(const id of [
-  "hive","bnb","allowance","identity",
-  "router","pairLock","minimum","wrapped",
-  "pair","pairStatus","simulation"
- ]){
-  show(id,"Not checked");
- }
- show("result","Run preflight first.","warn");
+function invalidate(){
+ verified=false;
+ approved=false;
+ walletAddress="";
+ show("simulation","Not attempted.");
+ show("approvalStatus","Not submitted.","warn");
+ buttons();
 }
 
-async function walletStatus(){
+async function status(){
  const p=provider();
  const network=await p.getNetwork();
  const accounts=await p.listAccounts();
 
  show(
   "network",
-  network.chainId===97
+  network.chainId===CHAIN_ID
    ?"BSC Testnet (97)"
-   :"Wrong chain: "+network.chainId,
-  network.chainId===97?"good":"bad"
+   :"Wrong network: "+network.chainId,
+  network.chainId===CHAIN_ID?"good":"bad"
  );
 
  show(
@@ -289,24 +306,25 @@ async function walletStatus(){
 
 async function connect(){
  if(busy)return;
- setBusy(true);
+ busy=true;buttons();
 
  try{
   const p=provider();
   await p.send("eth_requestAccounts",[]);
-  await walletStatus();
+  invalidate();
+  await status();
   log("MetaMask connected.");
  }catch(e){
-  log("Connection error: "+errorText(e));
-  show("result",errorText(e),"bad");
+  show("result",err(e),"bad");
+  log("Connection error: "+err(e));
  }finally{
-  setBusy(false);
+  busy=false;buttons();
  }
 }
 
 async function switchNetwork(){
  if(busy)return;
- setBusy(true);
+ busy=true;buttons();
 
  try{
   provider();
@@ -314,7 +332,7 @@ async function switchNetwork(){
   try{
    await window.ethereum.request({
     method:"wallet_switchEthereumChain",
-    params:[{chainId:CHAIN}]
+    params:[{chainId:CHAIN_HEX}]
    });
   }catch(e){
    if(Number(e.code)!==4902)throw e;
@@ -322,7 +340,7 @@ async function switchNetwork(){
    await window.ethereum.request({
     method:"wallet_addEthereumChain",
     params:[{
-     chainId:CHAIN,
+     chainId:CHAIN_HEX,
      chainName:"BSC Testnet",
      nativeCurrency:{
       name:"Test BNB",
@@ -340,56 +358,32 @@ async function switchNetwork(){
 
    await window.ethereum.request({
     method:"wallet_switchEthereumChain",
-    params:[{chainId:CHAIN}]
+    params:[{chainId:CHAIN_HEX}]
    });
   }
 
-  await walletStatus();
-  reset();
-  log("BSC Testnet switch requested.");
+  invalidate();
+  await status();
+  log("BSC Testnet selected.");
 
  }catch(e){
-  show("result",errorText(e),"bad");
-  log("Switch error: "+errorText(e));
+  show("result",err(e),"bad");
+  log("Network error: "+err(e));
  }finally{
-  setBusy(false);
+  busy=false;buttons();
  }
 }
 
-async function optionalRead(
- contract,
- method,
- id,
- format
-){
- try{
-  const value=await contract[method]();
-  show(id,format(value),"good");
-  log(method+"(): "+format(value));
-  return value;
- }catch(e){
-  show(
-   id,
-   "Getter unavailable or reverted: "+
-   errorText(e),
-   "warn"
-  );
-  log(method+"() unavailable.");
-  return null;
- }
-}
-
-async function runPreflight(){
+async function check(){
  if(busy)return;
- setBusy(true);
- reset();
- report=[];
+ busy=true;
+ invalidate();
+ buttons();
 
  try{
-  const {p,network,accounts}=
-   await walletStatus();
+  const {p,network,accounts}=await status();
 
-  if(network.chainId!==97){
+  if(network.chainId!==CHAIN_ID){
    throw Error("Switch to BSC Testnet first.");
   }
 
@@ -399,15 +393,13 @@ async function runPreflight(){
 
   const account=accounts[0];
 
-  const tokenCode=await p.getCode(TOKEN);
-  const routerCode=await p.getCode(ROUTER);
+  const [tokenCode,routerCode]=await Promise.all([
+   p.getCode(TOKEN),
+   p.getCode(ROUTER)
+  ]);
 
-  if(tokenCode==="0x"){
-   throw Error("V5 contract not found.");
-  }
-
-  if(routerCode==="0x"){
-   throw Error("PancakeSwap router not found.");
+  if(tokenCode==="0x"||routerCode==="0x"){
+   throw Error("Token or router contract missing.");
   }
 
   const token=new ethers.Contract(
@@ -419,10 +411,9 @@ async function runPreflight(){
   );
 
   const [
-   name,symbol,decimals,
-   hiveBalance,bnbBalance,
-   allowance,tokenRouter,
-   routerWBNB,factoryAddress
+   name,symbol,decimals,balance,bnb,
+   allowance,configuredRouter,
+   wrapped,factoryAddress,locked,minimum
   ]=await Promise.all([
    token.name(),
    token.symbol(),
@@ -432,340 +423,466 @@ async function runPreflight(){
    token.allowance(account,ROUTER),
    token.router(),
    router.WETH(),
-   router.factory()
+   router.factory(),
+   token.pairLocked(),
+   token.minimumFundingBnb()
   ]);
+
+  const hiveAmount=ethers.utils.parseUnits(
+   AMOUNT_HIVE,decimals
+  );
+
+  const bnbAmount=ethers.utils.parseEther(
+   AMOUNT_BNB
+  );
+
+  const identityOK=
+   name==="Hive Token" &&
+   symbol==="HIVE" &&
+   Number(decimals)===18;
+
+  const routerOK=
+   configuredRouter.toLowerCase()===
+   ROUTER.toLowerCase();
+
+  const wrappedOK=
+   wrapped.toLowerCase()===
+   WBNB.toLowerCase();
 
   show(
    "identity",
    name+" ("+symbol+") — "+decimals+" decimals",
-   symbol.toUpperCase()==="HIVE"?"good":"bad"
+   identityOK?"good":"bad"
   );
 
-  if(symbol.toUpperCase()!=="HIVE"){
-   throw Error("Token symbol mismatch.");
-  }
-
-  const amountHIVE=ethers.utils.parseUnits(
-   HIVE_AMOUNT,decimals
+  show(
+   "router",
+   routerOK?"MATCHES":"MISMATCH: "+configuredRouter,
+   routerOK?"good":"bad"
   );
 
-  const amountBNB=ethers.utils.parseEther(
-   BNB_AMOUNT
+  show(
+   "wrapped",
+   wrappedOK?"MATCHES":"MISMATCH: "+wrapped,
+   wrappedOK?"good":"bad"
   );
 
-  const enoughHIVE=hiveBalance.gte(amountHIVE);
-  const enoughBNB=bnbBalance.gt(amountBNB);
-  const enoughAllowance=allowance.gte(amountHIVE);
+  show(
+   "lock",
+   locked?"TRUE — locked":"FALSE — unlocked",
+   locked?"warn":"good"
+  );
+
+  show(
+   "minimum",
+   ethers.utils.formatEther(minimum)+" tBNB",
+   "good"
+  );
 
   show(
    "hive",
-   ethers.utils.formatUnits(
-    hiveBalance,decimals
-   )+" HIVE",
-   enoughHIVE?"good":"bad"
+   ethers.utils.formatUnits(balance,decimals)+" HIVE",
+   balance.gte(hiveAmount)?"good":"bad"
   );
 
   show(
    "bnb",
-   ethers.utils.formatEther(bnbBalance)+" tBNB",
-   enoughBNB?"good":"bad"
+   ethers.utils.formatEther(bnb)+" tBNB",
+   bnb.gt(bnbAmount)?"good":"bad"
   );
 
   show(
    "allowance",
-   ethers.utils.formatUnits(
-    allowance,decimals
-   )+" HIVE approved for router",
-   enoughAllowance?"good":"warn"
-  );
-
-  const routerMatches=
-   tokenRouter.toLowerCase()===
-   ROUTER.toLowerCase();
-
-  show(
-   "router",
-   routerMatches
-    ?"MATCHES PancakeSwap V2"
-    :"MISMATCH: "+tokenRouter,
-   routerMatches?"good":"bad"
-  );
-
-  const wrappedMatches=
-   routerWBNB.toLowerCase()===
-   WBNB.toLowerCase();
-
-  show(
-   "wrapped",
-   wrappedMatches
-    ?"Matches expected testnet WBNB"
-    :"Different WBNB: "+routerWBNB,
-   wrappedMatches?"good":"bad"
-  );
-
-  const locked=await optionalRead(
-   token,
-   "pairLocked",
-   "pairLock",
-   value=>value
-    ?"TRUE — pair is locked"
-    :"FALSE — pair is not locked"
-  );
-
-  const minimum=await optionalRead(
-   token,
-   "minimumFundingBnb",
-   "minimum",
-   value=>
-    ethers.utils.formatEther(value)+" tBNB"
+   ethers.utils.formatUnits(allowance,decimals)+
+   " HIVE approved",
+   allowance.gte(hiveAmount)?"good":"warn"
   );
 
   const factoryCode=await p.getCode(factoryAddress);
 
   if(factoryCode==="0x"){
-   throw Error("Router factory contract not found.");
+   throw Error("Router factory not found.");
   }
 
   const factory=new ethers.Contract(
    factoryAddress,FACTORY_ABI,p
   );
 
-  const pairAddress=await factory.getPair(
-   TOKEN,routerWBNB
+  const pair=await factory.getPair(TOKEN,wrapped);
+
+  show(
+   "pair",
+   pair===ethers.constants.AddressZero
+    ?"No pair exists yet"
+    :pair,
+   "warn"
   );
 
-  const zero=ethers.constants.AddressZero;
-
-  if(pairAddress===zero){
-   show(
-    "pair",
-    "No existing HIVE/WBNB pair",
-    "warn"
-   );
-
-   show(
-    "pairStatus",
-    "Router may create a new pair during liquidity addition.",
-    "warn"
-   );
-
-  }else{
-   show("pair",pairAddress,"good");
-
-   const pairCode=await p.getCode(pairAddress);
-
-   if(pairCode==="0x"){
-    show(
-     "pairStatus",
-     "Pair address has no deployed code.",
-     "bad"
-    );
-   }else{
-    const pair=new ethers.Contract(
-     pairAddress,PAIR_ABI,p
-    );
-
-    const [token0,token1,reserves]=
-     await Promise.all([
-      pair.token0(),
-      pair.token1(),
-      pair.getReserves()
-     ]);
-
-    const correctPair=
-     [token0.toLowerCase(),token1.toLowerCase()]
-      .includes(TOKEN.toLowerCase()) &&
-     [token0.toLowerCase(),token1.toLowerCase()]
-      .includes(routerWBNB.toLowerCase());
-
-    show(
-     "pairStatus",
-     correctPair
-      ?"Existing pair found. Raw reserves: "+
-       reserves[0].toString()+" / "+
-       reserves[1].toString()
-      :"Pair token mismatch.",
-     correctPair?"good":"bad"
-    );
-   }
+  if(!identityOK||!routerOK||!wrappedOK){
+   throw Error("Contract identity or router mismatch.");
   }
 
-  log("Pair and token checks completed.");
-
-  if(!routerMatches || !wrappedMatches){
+  if(locked){
    throw Error(
-    "Router configuration mismatch. " +
-    "Simulation stopped."
+    "Pair is locked. Approval disabled pending review."
    );
   }
 
-  if(!enoughHIVE || !enoughBNB){
+  if(bnbAmount.lt(minimum)){
    throw Error(
-    "Insufficient HIVE or tBNB for the planned amounts."
+    "Planned tBNB is below the minimum funding amount."
    );
   }
 
-  if(locked===true){
-   log(
-    "V5 reports pairLocked=true. " +
-    "Liquidity behavior needs review."
+  if(!balance.gte(hiveAmount)){
+   throw Error("Insufficient HIVE.");
+  }
+
+  if(!bnb.gt(bnbAmount)){
+   throw Error("Insufficient tBNB.");
+  }
+
+  walletAddress=account;
+  verified=true;
+  approved=allowance.gte(hiveAmount);
+
+  show(
+   "approvalStatus",
+   approved
+    ?"Router already has enough allowance."
+    :"Ready to request exactly 10,000 HIVE approval.",
+   approved?"good":"warn"
+  );
+
+  show(
+   "result",
+   approved
+    ?"Checks passed. Run Step 5."
+    :"Checks passed. Step 4 is available.",
+   "good"
+  );
+
+  log("Token, router, balances and lock checked.");
+  log(
+   "Router allowance: "+
+   ethers.utils.formatUnits(allowance,decimals)+
+   " HIVE."
+  );
+
+ }catch(e){
+  verified=false;
+  approved=false;
+  show("result",err(e),"bad");
+  log("Check failed: "+err(e));
+ }finally{
+  busy=false;buttons();
+ }
+}
+
+async function approve(){
+ if(busy||!verified||approved)return;
+
+ busy=true;buttons();
+
+ try{
+  const {p,network,accounts}=await status();
+
+  if(network.chainId!==CHAIN_ID){
+   throw Error("Wrong network.");
+  }
+
+  if(
+   !accounts.length ||
+   accounts[0].toLowerCase()!==
+   walletAddress.toLowerCase()
+  ){
+   throw Error("Wallet account changed. Run Step 3 again.");
+  }
+
+  const token=new ethers.Contract(
+   TOKEN,TOKEN_ABI,p.getSigner()
+  );
+
+  const configuredRouter=await token.router();
+  const locked=await token.pairLocked();
+  const decimals=await token.decimals();
+
+  if(
+   configuredRouter.toLowerCase()!==
+   ROUTER.toLowerCase() ||
+   locked ||
+   Number(decimals)!==18
+  ){
+   throw Error(
+    "Contract settings changed. Approval canceled."
    );
   }
 
-  if(minimum!==null && amountBNB.lt(minimum)){
-   log(
-    "0.01 tBNB is below the token's " +
-    "reported minimum funding amount."
-   );
-  }
+  const amount=ethers.utils.parseUnits(
+   AMOUNT_HIVE,18
+  );
 
-  if(!enoughAllowance){
+  const current=await token.allowance(
+   walletAddress,ROUTER
+  );
+
+  if(current.gte(amount)){
+   approved=true;
    show(
-    "simulation",
-    "BLOCKED BY ALLOWANCE: Router is not " +
-    "approved to spend 10,000 HIVE. " +
-    "A realistic addLiquidityETH simulation " +
-    "cannot pass this prerequisite yet.",
-    "warn"
+    "approvalStatus",
+    "Already approved for at least 10,000 HIVE.",
+    "good"
    );
-
-   show(
-    "result",
-    "Preflight completed. Wallet and contract " +
-    "settings were checked, but the router " +
-    "allowance is insufficient. No approval " +
-    "was sent. Review token-specific " +
-    "restrictions before enabling approval.",
-    "warn"
-   );
-
-   log(
-    "Simulation not attempted: " +
-    "insufficient router allowance."
-   );
-
+   log("Existing allowance sufficient.");
    return;
   }
 
-  /*
-    The following is an eth_call simulation,
-    NOT a transaction.
+  if(!current.isZero()){
+   throw Error(
+    "Existing nonzero allowance detected. " +
+    "Approval stopped for manual review."
+   );
+  }
 
-    Zero minimums are used for diagnostic
-    purposes only. They must not be copied
-    into a real liquidity transaction.
-  */
+  show(
+   "approvalStatus",
+   "MetaMask confirmation requested. " +
+   "Check token HIVE, spender and 10,000 amount.",
+   "warn"
+  );
+
+  log("Requesting exact 10,000 HIVE approval.");
+
+  const tx=await token.approve(ROUTER,amount);
+
+  show(
+   "approvalStatus",
+   "Approval submitted: "+tx.hash+
+   ". Waiting for confirmation.",
+   "warn"
+  );
+
+  log("Approval transaction: "+tx.hash);
+
+  const receipt=await tx.wait(1);
+
+  if(receipt.status!==1){
+   throw Error("Approval transaction failed.");
+  }
+
+  const updated=await token.allowance(
+   walletAddress,ROUTER
+  );
+
+  if(!updated.gte(amount)){
+   throw Error(
+    "Transaction confirmed but allowance is insufficient."
+   );
+  }
+
+  approved=true;
+
+  show(
+   "allowance",
+   ethers.utils.formatUnits(updated,18)+
+   " HIVE approved",
+   "good"
+  );
+
+  show(
+   "approvalStatus",
+   "APPROVAL CONFIRMED. Transaction: "+tx.hash,
+   "good"
+  );
+
+  show(
+   "result",
+   "Approval confirmed. Now run Step 5.",
+   "good"
+  );
+
+  log("Approval confirmed on BSC Testnet.");
+
+ }catch(e){
+  show(
+   "approvalStatus",
+   "Approval not confirmed: "+err(e),
+   "bad"
+  );
+  log("Approval error: "+err(e));
+ }finally{
+  busy=false;buttons();
+ }
+}
+
+async function simulate(){
+ if(busy||!verified||!approved)return;
+
+ busy=true;buttons();
+
+ try{
+  const {p,network,accounts}=await status();
+
+  if(network.chainId!==CHAIN_ID){
+   throw Error("Wrong network.");
+  }
+
+  if(
+   !accounts.length ||
+   accounts[0].toLowerCase()!==
+   walletAddress.toLowerCase()
+  ){
+   throw Error("Account changed. Run Step 3 again.");
+  }
+
+  const token=new ethers.Contract(
+   TOKEN,TOKEN_ABI,p
+  );
+
+  const router=new ethers.Contract(
+   ROUTER,ROUTER_ABI,p
+  );
+
+  const amountHIVE=ethers.utils.parseUnits(
+   AMOUNT_HIVE,18
+  );
+
+  const amountBNB=ethers.utils.parseEther(
+   AMOUNT_BNB
+  );
+
+  const [
+   allowance,balance,bnb,
+   locked,configuredRouter,minimum
+  ]=await Promise.all([
+   token.allowance(walletAddress,ROUTER),
+   token.balanceOf(walletAddress),
+   p.getBalance(walletAddress),
+   token.pairLocked(),
+   token.router(),
+   token.minimumFundingBnb()
+  ]);
+
+  if(!allowance.gte(amountHIVE)){
+   throw Error("Insufficient allowance.");
+  }
+
+  if(!balance.gte(amountHIVE)){
+   throw Error("Insufficient HIVE.");
+  }
+
+  if(!bnb.gt(amountBNB)){
+   throw Error("Insufficient tBNB.");
+  }
+
+  if(locked){
+   throw Error("Pair is locked.");
+  }
+
+  if(amountBNB.lt(minimum)){
+   throw Error("Below minimum funding BNB.");
+  }
+
+  if(
+   configuredRouter.toLowerCase()!==
+   ROUTER.toLowerCase()
+  ){
+   throw Error("Router mismatch.");
+  }
 
   const deadline=Math.floor(
    Date.now()/1000
   )+1200;
 
-  const args=[
+  show(
+   "simulation",
+   "Running read-only eth_call...",
+   "warn"
+  );
+
+  /*
+   Diagnostic simulation only.
+   Zero minimums are NOT safe values
+   for a real liquidity transaction.
+  */
+
+  const result=await router.callStatic.addLiquidityETH(
    TOKEN,
    amountHIVE,
    0,
    0,
-   account,
-   deadline
-  ];
+   walletAddress,
+   deadline,
+   {
+    from:walletAddress,
+    value:amountBNB
+   }
+  );
 
-  try{
-   const result=await router.callStatic.addLiquidityETH(
-    ...args,
-    {
-     from:account,
-     value:amountBNB
-    }
-   );
+  show(
+   "simulation",
+   "SIMULATION SUCCEEDED. Expected HIVE: "+
+   ethers.utils.formatUnits(result[0],18)+
+   ". Expected tBNB: "+
+   ethers.utils.formatEther(result[1])+
+   ".",
+   "good"
+  );
 
-   show(
-    "simulation",
-    "ETH_CALL SUCCEEDED. Expected token input: "+
-    ethers.utils.formatUnits(
-     result[0],decimals
-    )+" HIVE; BNB input: "+
-    ethers.utils.formatEther(
-     result[1]
-    )+" tBNB.",
-    "good"
-   );
+  show(
+   "result",
+   "Read-only router simulation passed. " +
+   "Actual liquidity remains locked. " +
+   "We must still review slippage, " +
+   "liquidity token ownership and " +
+   "token-specific transfer behavior.",
+   "good"
+  );
 
-   show(
-    "result",
-    "Read-only router simulation succeeded. " +
-    "This does not authorize a transaction. " +
-    "Slippage protection, token-specific " +
-    "restrictions, and liquidity ownership " +
-    "must still be reviewed.",
-    "good"
-   );
-
-   log("Read-only router simulation succeeded.");
-
-  }catch(e){
-   const message=errorText(e);
-
-   show(
-    "simulation",
-    "ETH_CALL REVERTED: "+message,
-    "bad"
-   );
-
-   show(
-    "result",
-    "The router simulation reverted. " +
-    "No transaction was sent. " +
-    "We need to diagnose the revert " +
-    "before enabling liquidity.",
-    "bad"
-   );
-
-   log("Router simulation reverted: "+message);
-  }
+  log("Read-only liquidity simulation succeeded.");
 
  }catch(e){
-  show("result",errorText(e),"bad");
-  log("Preflight error: "+errorText(e));
+  show(
+   "simulation",
+   "SIMULATION FAILED: "+err(e),
+   "bad"
+  );
+
+  show(
+   "result",
+   "Do not add liquidity. " +
+   "Review the simulation error.",
+   "bad"
+  );
+
+  log("Simulation failed: "+err(e));
  }finally{
-  setBusy(false);
+  busy=false;buttons();
  }
 }
 
 async function copyReport(){
- const fields=[
-  ["Network","network"],
-  ["Account","account"],
-  ["HIVE balance","hive"],
-  ["tBNB balance","bnb"],
-  ["Allowance","allowance"],
-  ["Identity","identity"],
-  ["Router","router"],
-  ["Pair lock","pairLock"],
-  ["Minimum BNB","minimum"],
-  ["Wrapped BNB","wrapped"],
-  ["Pair","pair"],
-  ["Pair status","pairStatus"],
-  ["Simulation","simulation"],
-  ["Result","result"]
+ const ids=[
+  "account","network","hive","bnb",
+  "allowance","identity","router",
+  "lock","minimum","wrapped","pair",
+  "approvalStatus","simulation","result"
  ];
 
  const text=[
-  "HiveToken V5 Liquidity Preflight",
-  "V5: "+TOKEN,
+  "HiveToken V5 Approval & Simulation",
+  "Token: "+TOKEN,
   "Router: "+ROUTER,
   "Planned: 10000 HIVE + 0.01 tBNB",
   "",
-  ...fields.map(
-   ([label,id])=>
-    label+": "+$(id).textContent
-  ),
+  ...ids.map(id=>id+": "+$(id).textContent),
   "",
   ...report
  ].join("\n");
 
  try{
   await navigator.clipboard.writeText(text);
-  log("Preflight report copied.");
+  log("Report copied.");
  }catch(e){
   const field=document.createElement("textarea");
   field.value=text;
@@ -779,25 +896,27 @@ async function copyReport(){
 
 $("connect").onclick=connect;
 $("switch").onclick=switchNetwork;
-$("check").onclick=runPreflight;
+$("check").onclick=check;
+$("approve").onclick=approve;
+$("simulate").onclick=simulate;
 $("copy").onclick=copyReport;
 
 if(window.ethereum?.on){
  window.ethereum.on("chainChanged",()=>{
-  reset();
-  walletStatus().catch(()=>{});
+  invalidate();
+  status().catch(()=>{});
  });
 
  window.ethereum.on("accountsChanged",()=>{
-  reset();
-  walletStatus().catch(()=>{});
+  invalidate();
+  status().catch(()=>{});
  });
 }
 
-walletStatus().catch(e=>{
- show("network",errorText(e),"bad");
+buttons();
+status().catch(e=>{
+ show("network",err(e),"bad");
 });
-
 </script>
 </body>
 </html>
