@@ -4,664 +4,474 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HiveToken V5 Deployment Recovery</title>
+<title>HiveToken V5 Liquidity Setup</title>
 <style>
 *{box-sizing:border-box}
-body{
- margin:0;padding:18px;background:#0b100d;
- color:#f4f5f0;font:16px Arial,sans-serif;
- line-height:1.6
-}
-main{
- max-width:680px;margin:auto;padding:22px;
- background:#171e18;border:1px solid #435344;
- border-radius:18px
-}
-h1{color:#ffd45c;font-size:26px;margin-top:0}
-h2{font-size:19px}
-.panel{
- background:#080c09;padding:16px;
- border-radius:12px;margin:16px 0;
- overflow-wrap:anywhere
-}
-button{
- width:100%;padding:17px;margin:10px 0;
- border:0;border-radius:12px;background:#ffd45c;
- color:#141414;font-size:17px;font-weight:bold
-}
-button:disabled{opacity:.45}
-.good{color:#5bf28b}
-.bad{color:#ff7777}
-.warn{color:#ffd45c}
-.muted{color:#b7c1b7}
+body{margin:0;padding:16px;background:#0b100d;color:#f5f6f2;font:16px Arial,sans-serif;line-height:1.55}
+main{max-width:680px;margin:auto;padding:20px;background:#172019;border:1px solid #405342;border-radius:18px}
+h1{color:#ffd45c;margin:0;font-size:27px}
+h2{font-size:20px;margin:0 0 12px}
+.panel{background:#080d09;padding:17px;border-radius:13px;margin:16px 0;overflow-wrap:anywhere}
+button{display:block;width:100%;padding:17px 12px;margin:12px 0;background:#ffd45c;border:0;border-radius:12px;color:#151515;font-size:17px;font-weight:bold}
+button:disabled{opacity:.4}
+.good{color:#65f391}.bad{color:#ff7979}.warn{color:#ffd45c}.muted{color:#bdc5bd}
+hr{border:0;border-top:1px solid #364438;margin:15px 0}
+small{color:#bdc5bd}
 code{font-size:13px;overflow-wrap:anywhere}
-a{color:#ffd45c}
-hr{border:0;border-top:1px solid #354335;margin:15px 0}
-.value{display:block;margin:6px 0;overflow-wrap:anywhere}
+.value{margin:5px 0 12px;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
 <main>
 
 <h1>🐝 HiveToken V5</h1>
-<h2>Deployment Recovery</h2>
+<p>BSC Testnet — Liquidity Setup</p>
 
 <div class="panel">
- <strong class="warn">BSC TESTNET ONLY</strong>
- <p>
-  This page finds the actual contract address
-  from the saved V5 deployment transaction.
- </p>
- <p class="good">
-  Read-only. No approvals, liquidity,
-  deployments, or other transactions.
- </p>
+<strong class="warn">TESTNET ONLY — CHAIN ID 97</strong>
+<p>Correct V5 deployment address:</p>
+<code>0xe1d3c5d7e66ed41b87913d5c6b5b519ccd691a0a</code>
+<p><small>Recovered from the successful deployment transaction.</small></p>
+</div>
+
+<button id="connect">1. Connect MetaMask</button>
+<button id="switch">2. Switch to BSC Testnet</button>
+<button id="verify">3. Verify V5 & Wallet</button>
+
+<div class="panel">
+<h2>Wallet</h2>
+<strong>Account</strong>
+<div id="account" class="muted">Not connected</div>
+<hr>
+<strong>Network</strong>
+<div id="network" class="muted">Not checked</div>
+<hr>
+<strong>Test BNB balance</strong>
+<div id="bnb" class="muted">Not checked</div>
+<hr>
+<strong>HIVE balance</strong>
+<div id="hive" class="muted">Not checked</div>
 </div>
 
 <div class="panel">
- <strong>Saved V5 deployment transaction</strong>
- <span class="value"><code id="txHash"></code></span>
- <hr>
- <strong>Previously entered V5 address</strong>
- <span class="value"><code id="oldAddress"></code></span>
- <hr>
- <strong>PancakeSwap router</strong>
- <span class="value"><code id="routerAddress"></code></span>
-</div>
-
-<button id="connectBtn">
- 1. Connect MetaMask
-</button>
-
-<button id="switchBtn">
- 2. Switch to BSC Testnet
-</button>
-
-<button id="recoverBtn">
- 3. Recover V5 Deployment Address
-</button>
-
-<div class="panel">
- <h2>Wallet</h2>
- <div id="wallet" class="muted">Not checked</div>
- <hr>
- <strong>Active network</strong>
- <div id="network" class="muted">Not checked</div>
+<h2>Contract Verification</h2>
+<strong>V5 contract code</strong>
+<div id="tokenCode" class="muted">Not checked</div>
+<hr>
+<strong>Token name / symbol</strong>
+<div id="identity" class="muted">Not checked</div>
+<hr>
+<strong>Token decimals</strong>
+<div id="decimals" class="muted">Not checked</div>
+<hr>
+<strong>Token router setting</strong>
+<div id="routerSetting" class="muted">Not checked</div>
+<hr>
+<strong>PancakeSwap router</strong>
+<div id="routerCode" class="muted">Not checked</div>
+<hr>
+<strong>Liquidity readiness</strong>
+<div id="readiness" class="warn">Run verification first.</div>
 </div>
 
 <div class="panel">
- <h2>Deployment transaction</h2>
- <div id="transaction" class="muted">Not checked</div>
- <hr>
- <strong>Transaction status</strong>
- <div id="receiptStatus" class="muted">Not checked</div>
- <hr>
- <strong>Recovered contract address</strong>
- <div id="recovered" class="muted">Not checked</div>
-</div>
-
-<div class="panel">
- <h2>Contract verification</h2>
- <strong>Recovered V5 code</strong>
- <div id="tokenCode" class="muted">Not checked</div>
- <hr>
- <strong>PancakeSwap router code</strong>
- <div id="routerCode" class="muted">Not checked</div>
- <hr>
- <strong>Result</strong>
- <div id="result" class="warn">
-  Connect and run recovery.
- </div>
-</div>
-
-<div class="panel">
- <h2>Recovery log</h2>
- <div id="log" class="muted">
-  Ready to inspect the saved transaction.
- </div>
-</div>
-
-<button id="copyBtn">
- Copy Recovery Report
-</button>
-
-<p class="muted">
- Do not add liquidity or deploy again until
- the recovered address is verified.
+<h2>Liquidity Setup</h2>
+<p>Planned test amounts:</p>
+<strong>10,000 HIVE + 0.01 tBNB</strong>
+<p class="warn">
+Transactions are intentionally locked in this version.
+We must first confirm the V5 contract's actual
+liquidity functions and token behavior.
 </p>
+<button disabled>4. Approve HIVE — Locked</button>
+<button disabled>5. Add Liquidity — Locked</button>
+</div>
+
+<div class="panel">
+<h2>Diagnostic Log</h2>
+<div id="log" class="muted">Ready.</div>
+</div>
+
+<button id="copy">Copy Verification Report</button>
 
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
 "use strict";
 
-const DEPLOY_TX =
-"0x51b065e6012c9b19929a7ca84f0f57782178f4956bcb8269e8321e52c180d08b";
-
-const OLD_TOKEN =
-"0xe1d3c5d7e66fd41b87913d5c6b5b519ccd691a0a";
+const TOKEN =
+"0xe1d3c5d7e66ed41b87913d5c6b5b519ccd691a0a";
 
 const ROUTER =
 "0xd99d1c33f9fc3444f8101754abc46c52416550d1";
 
-const TESTNET = "0x61";
+const CHAIN = "0x61";
 
-const NETWORK_PARAMS = {
- chainId: TESTNET,
- chainName: "BSC Testnet",
- nativeCurrency: {
-  name: "Test BNB",
-  symbol: "tBNB",
-  decimals: 18
- },
- rpcUrls: [
-  "https://bsc-testnet-dataseed.bnbchain.org"
- ],
- blockExplorerUrls: [
-  "https://testnet.bscscan.com"
- ]
-};
+const ABI = [
+ "function name() view returns (string)",
+ "function symbol() view returns (string)",
+ "function decimals() view returns (uint8)",
+ "function balanceOf(address) view returns (uint256)",
+ "function router() view returns (address)"
+];
 
 const $ = id => document.getElementById(id);
 
-$("txHash").textContent = DEPLOY_TX;
-$("oldAddress").textContent = OLD_TOKEN;
-$("routerAddress").textContent = ROUTER;
-
 let busy = false;
 let report = [];
-let recoveredAddress = null;
+let lastVerified = false;
 
-function display(id, value, style="muted") {
- $(id).textContent = value;
- $(id).className = style;
+function status(id,message,type="muted"){
+ $(id).textContent=message;
+ $(id).className=type;
 }
 
-function addLog(message) {
- const time = new Date().toLocaleTimeString();
- const entry = document.createElement("div");
- entry.textContent = "[" + time + "] " + message;
- $("log").prepend(entry);
+function log(message){
+ const line=document.createElement("div");
+ line.textContent="["+new Date().toLocaleTimeString()+"] "+message;
+ $("log").prepend(line);
  report.push(message);
 }
 
-function errorMessage(error) {
- return String(
-  error?.data?.message ||
-  error?.message ||
-  error ||
-  "Unknown error"
- );
+function errorText(e){
+ return String(e?.reason||e?.data?.message||e?.message||e);
 }
 
-function provider() {
- if (!window.ethereum?.request) {
-  throw Error(
-   "MetaMask provider not found. Open this " +
-   "website inside MetaMask's browser."
-  );
+function wallet(){
+ if(!window.ethereum?.request){
+  throw Error("Open this page inside MetaMask's browser.");
  }
- return window.ethereum;
+ if(!window.ethers){
+  throw Error("Ethers library did not load. Refresh the page.");
+ }
+ return new ethers.providers.Web3Provider(window.ethereum,"any");
 }
 
-async function rpc(method, params=[]) {
- return provider().request({method, params});
-}
-
-function isTestnet(chain) {
- return String(chain).toLowerCase() === TESTNET;
-}
-
-function networkName(chain) {
- const id = parseInt(chain,16);
- if(id===97) return "BSC Testnet (97)";
- if(id===56) return "BNB Mainnet (56)";
- return "Chain ID " + id;
-}
-
-function setBusy(value) {
+function setBusy(value){
  busy=value;
- $("connectBtn").disabled=value;
- $("switchBtn").disabled=value;
- $("recoverBtn").disabled=value;
+ for(const id of ["connect","switch","verify"]){
+  $(id).disabled=value;
+ }
 }
 
-async function refreshWallet() {
- const chain = await rpc("eth_chainId");
- const accounts = await rpc("eth_accounts");
+function resetChecks(){
+ lastVerified=false;
+ for(const id of [
+  "tokenCode","identity","decimals",
+  "routerSetting","routerCode","bnb","hive"
+ ]){
+  status(id,"Not checked");
+ }
+ status("readiness","Run verification first.","warn");
+}
 
- display(
+async function refresh(){
+ const provider=wallet();
+ const network=await provider.getNetwork();
+ const accounts=await provider.listAccounts();
+
+ status(
   "network",
-  networkName(chain),
-  isTestnet(chain) ? "good" : "bad"
+  network.chainId===97
+   ?"BSC Testnet (97)"
+   :"Wrong network: Chain ID "+network.chainId,
+  network.chainId===97?"good":"bad"
  );
 
- display(
-  "wallet",
-  accounts.length
-   ? "Connected: " + accounts[0]
-   : "Account not connected",
-  accounts.length ? "good" : "warn"
+ status(
+  "account",
+  accounts[0]||"Not connected",
+  accounts.length?"good":"warn"
  );
 
- return chain;
+ return {provider,network,accounts};
 }
 
-async function connectWallet() {
- if(busy) return;
+async function connect(){
+ if(busy)return;
  setBusy(true);
-
- try {
-  const accounts = await rpc(
-   "eth_requestAccounts"
-  );
-
-  if(!accounts.length) {
-   throw Error("No account returned.");
-  }
-
-  await refreshWallet();
-  addLog("MetaMask connected.");
-
- } catch(error) {
-  display(
-   "wallet",
-   errorMessage(error),
-   "bad"
-  );
-  addLog("Connection error: "+errorMessage(error));
-
- } finally {
+ try{
+  const provider=wallet();
+  await provider.send("eth_requestAccounts",[]);
+  await refresh();
+  log("MetaMask connected.");
+ }catch(e){
+  log("Connection error: "+errorText(e));
+  status("readiness",errorText(e),"bad");
+ }finally{
   setBusy(false);
  }
 }
 
-async function switchNetwork() {
- if(busy) return;
+async function switchNetwork(){
+ if(busy)return;
  setBusy(true);
+ try{
+  wallet();
+  try{
+   await window.ethereum.request({
+    method:"wallet_switchEthereumChain",
+    params:[{chainId:CHAIN}]
+   });
+  }catch(e){
+   if(Number(e.code)!==4902)throw e;
 
- try {
-  try {
-   await rpc(
-    "wallet_switchEthereumChain",
-    [{chainId:TESTNET}]
-   );
-  } catch(error) {
-   if(Number(error.code)!==4902) throw error;
+   await window.ethereum.request({
+    method:"wallet_addEthereumChain",
+    params:[{
+     chainId:CHAIN,
+     chainName:"BSC Testnet",
+     nativeCurrency:{
+      name:"Test BNB",symbol:"tBNB",decimals:18
+     },
+     rpcUrls:[
+      "https://bsc-testnet-dataseed.bnbchain.org"
+     ],
+     blockExplorerUrls:[
+      "https://testnet.bscscan.com"
+     ]
+    }]
+   });
 
-   await rpc(
-    "wallet_addEthereumChain",
-    [NETWORK_PARAMS]
-   );
-
-   await rpc(
-    "wallet_switchEthereumChain",
-    [{chainId:TESTNET}]
-   );
+   await window.ethereum.request({
+    method:"wallet_switchEthereumChain",
+    params:[{chainId:CHAIN}]
+   });
   }
 
-  const chain = await refreshWallet();
+  await refresh();
+  resetChecks();
+  log("Network switch requested.");
 
-  if(!isTestnet(chain)) {
-   throw Error("Chain ID 97 is not active.");
-  }
-
-  addLog("BSC Testnet selected.");
-
- } catch(error) {
-  display(
-   "network",
-   "Switch failed: "+errorMessage(error),
-   "bad"
-  );
-  addLog("Network error: "+errorMessage(error));
-
- } finally {
+ }catch(e){
+  status("readiness",errorText(e),"bad");
+  log("Network error: "+errorText(e));
+ }finally{
   setBusy(false);
  }
 }
 
-async function codeCheck(address,id,label) {
- try {
-  const code = await rpc(
-   "eth_getCode",
-   [address,"latest"]
-  );
-
-  if(!code || code==="0x" || code==="0x0") {
-   display(
-    id,
-    "NO CONTRACT CODE at "+address,
-    "bad"
-   );
-   addLog(label+": no deployed code.");
-   return false;
-  }
-
-  const bytes = Math.floor(
-   (code.length-2)/2
-  );
-
-  display(
-   id,
-   "FOUND: "+bytes+" bytes of deployed code.",
-   "good"
-  );
-
-  addLog(
-   label+": contract code found ("+
-   bytes+" bytes)."
-  );
-
-  return true;
-
- } catch(error) {
-  display(
-   id,
-   "RPC error: "+errorMessage(error),
-   "bad"
-  );
-
-  addLog(
-   label+" error: "+errorMessage(error)
-  );
-
-  return false;
- }
-}
-
-async function recoverDeployment() {
- if(busy) return;
+async function verify(){
+ if(busy)return;
  setBusy(true);
+ resetChecks();
 
- recoveredAddress=null;
- report=[];
+ try{
+  const {provider,network,accounts}=await refresh();
 
- display("transaction","Checking...","warn");
- display("receiptStatus","Checking...","warn");
- display("recovered","Not yet recovered","muted");
- display("tokenCode","Not checked","muted");
- display("routerCode","Not checked","muted");
- display("result","Running recovery...","warn");
-
- try {
-  const chain = await refreshWallet();
-
-  if(!isTestnet(chain)) {
-   throw Error(
-    "Wrong network. Switch to BSC Testnet first."
-   );
+  if(network.chainId!==97){
+   throw Error("Switch to BSC Testnet first.");
   }
 
-  addLog(
-   "Looking up saved deployment transaction."
-  );
-
-  const tx = await rpc(
-   "eth_getTransactionByHash",
-   [DEPLOY_TX]
-  );
-
-  const receipt = await rpc(
-   "eth_getTransactionReceipt",
-   [DEPLOY_TX]
-  );
-
-  if(!tx && !receipt) {
-   display(
-    "transaction",
-    "Transaction not found on BSC Testnet.",
-    "bad"
-   );
-
-   display(
-    "receiptStatus",
-    "No transaction receipt found.",
-    "bad"
-   );
-
-   display(
-    "result",
-    "The saved transaction hash was not found " +
-    "on BSC Testnet. The hash or original " +
-    "deployment network may be incorrect.",
-    "bad"
-   );
-
-   addLog(
-    "Saved transaction not found on Chain ID 97."
-   );
-
-   return;
+  if(!accounts.length){
+   throw Error("Connect MetaMask first.");
   }
 
-  display(
-   "transaction",
-   "FOUND: "+DEPLOY_TX,
-   "good"
-  );
+  const account=accounts[0];
 
-  addLog("Transaction found on BSC Testnet.");
-
-  if(!receipt) {
-   display(
-    "receiptStatus",
-    "Transaction exists, but no receipt is " +
-    "available yet.",
-    "warn"
-   );
-
-   display(
-    "result",
-    "No confirmed deployment receipt. " +
-    "Do not redeploy until this is resolved.",
-    "warn"
-   );
-
-   return;
+  const tokenCode=await provider.getCode(TOKEN);
+  if(tokenCode==="0x"){
+   throw Error("V5 contract code not found.");
   }
 
-  const successful =
-   receipt.status==="0x1" ||
-   receipt.status==="0x01";
-
-  display(
-   "receiptStatus",
-   successful
-    ? "SUCCESS — included in block "+
-      parseInt(receipt.blockNumber,16)
-    : "FAILED or reverted transaction",
-   successful ? "good" : "bad"
-  );
-
-  if(!successful) {
-   display(
-    "result",
-    "The saved transaction did not complete " +
-    "successfully. No V5 address can be " +
-    "recovered from this receipt.",
-    "bad"
-   );
-   addLog("Deployment receipt indicates failure.");
-   return;
-  }
-
-  const created = receipt.contractAddress;
-
-  if(!created) {
-   display(
-    "recovered",
-    "No contract address in transaction receipt.",
-    "bad"
-   );
-
-   const destination = tx?.to || "null";
-
-   addLog(
-    "Transaction destination: "+destination
-   );
-
-   display(
-    "result",
-    "This transaction succeeded but did not " +
-    "directly deploy a contract. It may be a " +
-    "factory call or the saved hash may refer " +
-    "to a different action. Do not guess an address.",
-    "bad"
-   );
-
-   return;
-  }
-
-  recoveredAddress=created;
-
-  display(
-   "recovered",
-   created,
-   "good"
-  );
-
-  addLog(
-   "Receipt contract address: "+created
-  );
-
-  const tokenOK = await codeCheck(
-   created,
+  status(
    "tokenCode",
-   "Recovered V5"
+   "FOUND — "+((tokenCode.length-2)/2)+" bytes",
+   "good"
   );
+  log("V5 deployed code confirmed.");
 
-  const routerOK = await codeCheck(
-   ROUTER,
-   "routerCode",
-   "PancakeSwap router"
-  );
-
-  const finalChain = await rpc("eth_chainId");
-
-  if(!isTestnet(finalChain)) {
-   display(
-    "result",
-    "Network changed during recovery. " +
-    "Run the checks again.",
-    "bad"
-   );
-   return;
+  const routerCode=await provider.getCode(ROUTER);
+  if(routerCode==="0x"){
+   throw Error("PancakeSwap router code not found.");
   }
 
-  if(tokenOK && routerOK) {
-   const matches =
-    created.toLowerCase()===
-    OLD_TOKEN.toLowerCase();
+  status(
+   "routerCode",
+   "FOUND — "+((routerCode.length-2)/2)+" bytes",
+   "good"
+  );
+  log("PancakeSwap router code confirmed.");
 
-   if(matches) {
-    display(
-     "result",
-     "The receipt confirms the old address, " +
-     "and contract code is present. " +
-     "The earlier result may have been " +
-     "an RPC inconsistency.",
+  const token=new ethers.Contract(TOKEN,ABI,provider);
+
+  let name,symbol,decimals;
+
+  try{
+   [name,symbol,decimals]=await Promise.all([
+    token.name(),
+    token.symbol(),
+    token.decimals()
+   ]);
+
+   status("identity",name+" ("+symbol+")","good");
+   status("decimals",String(decimals),"good");
+   log("Token identity: "+name+" ("+symbol+")");
+
+  }catch(e){
+   throw Error(
+    "Could not read ERC-20 token identity: "+
+    errorText(e)
+   );
+  }
+
+  if(symbol.toUpperCase()!=="HIVE"){
+   throw Error(
+    "Token symbol is "+symbol+", not HIVE."
+   );
+  }
+
+  let configuredRouter=null;
+
+  try{
+   configuredRouter=await token.router();
+
+   if(configuredRouter.toLowerCase()===ROUTER.toLowerCase()){
+    status(
+     "routerSetting",
+     "MATCHES PancakeSwap V2 router",
      "good"
     );
-   } else {
-    display(
-     "result",
-     "DEPLOYMENT ADDRESS RECOVERED. " +
-     "The receipt identifies a different " +
-     "contract address from the one in our " +
-     "old page. Both contract-code checks " +
-     "passed. We must still verify that " +
-     "this contract is HiveToken V5 " +
-     "before enabling liquidity.",
-     "good"
+   }else{
+    status(
+     "routerSetting",
+     "DIFFERENT ROUTER: "+configuredRouter,
+     "bad"
     );
    }
 
-   addLog("Deployment recovery checks passed.");
+  }catch(e){
+   status(
+    "routerSetting",
+    "router() getter unavailable: "+errorText(e),
+    "warn"
+   );
+   log("Router getter could not be confirmed.");
+  }
 
-  } else {
-   display(
-    "result",
-    "The transaction receipt was found, " +
-    "but one or more contract-code checks " +
-    "failed. Do not add liquidity.",
-    "bad"
+  const [bnbBalance,hiveBalance]=await Promise.all([
+   provider.getBalance(account),
+   token.balanceOf(account)
+  ]);
+
+  const bnbText=ethers.utils.formatEther(bnbBalance);
+  const hiveText=ethers.utils.formatUnits(
+   hiveBalance,decimals
+  );
+
+  status("bnb",bnbText+" tBNB","good");
+  status("hive",hiveText+" "+symbol,"good");
+
+  log("tBNB balance: "+bnbText);
+  log("HIVE balance: "+hiveText);
+
+  const sufficientBNB=bnbBalance.gte(
+   ethers.utils.parseEther("0.01")
+  );
+
+  const sufficientHIVE=hiveBalance.gte(
+   ethers.utils.parseUnits("10000",decimals)
+  );
+
+  const routerMatches=
+   configuredRouter!==null &&
+   configuredRouter.toLowerCase()===ROUTER.toLowerCase();
+
+  const problems=[];
+
+  if(!sufficientBNB){
+   problems.push("Less than 0.01 tBNB (plus gas required).");
+  }
+
+  if(!sufficientHIVE){
+   problems.push("Less than 10,000 HIVE.");
+  }
+
+  if(!routerMatches){
+   problems.push(
+    "Token's router configuration is not confirmed."
    );
   }
 
- } catch(error) {
-  const message=errorMessage(error);
+  if(problems.length){
+   status(
+    "readiness",
+    "CHECKS INCOMPLETE: "+problems.join(" "),
+    "warn"
+   );
+   log("Verification finished with warnings.");
+  }else{
+   lastVerified=true;
+   status(
+    "readiness",
+    "Basic checks passed. Contract-specific liquidity " +
+    "behavior still requires verification before " +
+    "transactions can be enabled.",
+    "good"
+   );
+   log("Basic V5 and wallet checks passed.");
+  }
 
-  display(
-   "result",
-   "RECOVERY ERROR: "+message,
-   "bad"
-  );
-
-  addLog("Recovery error: "+message);
-
- } finally {
+ }catch(e){
+  status("readiness",errorText(e),"bad");
+  log("Verification failed: "+errorText(e));
+ }finally{
   setBusy(false);
  }
 }
 
-async function copyReport() {
- const text = [
-  "HiveToken V5 Deployment Recovery",
-  "Saved transaction: "+DEPLOY_TX,
-  "Old V5 address: "+OLD_TOKEN,
-  "Recovered address: "+
-   (recoveredAddress||"Not recovered"),
+async function copyReport(){
+ const text=[
+  "HiveToken V5 Verification",
+  "Contract: "+TOKEN,
+  "Router: "+ROUTER,
+  "Wallet: "+$("account").textContent,
   "Network: "+$("network").textContent,
-  "Transaction: "+$("transaction").textContent,
-  "Receipt: "+$("receiptStatus").textContent,
   "V5 code: "+$("tokenCode").textContent,
+  "Identity: "+$("identity").textContent,
+  "Decimals: "+$("decimals").textContent,
+  "Router setting: "+$("routerSetting").textContent,
   "Router code: "+$("routerCode").textContent,
-  "Result: "+$("result").textContent,
+  "tBNB: "+$("bnb").textContent,
+  "HIVE: "+$("hive").textContent,
+  "Result: "+$("readiness").textContent,
   "",
   ...report
  ].join("\n");
 
- try {
+ try{
   await navigator.clipboard.writeText(text);
-  addLog("Recovery report copied.");
- } catch(error) {
+  log("Report copied.");
+ }catch(e){
   const field=document.createElement("textarea");
   field.value=text;
   field.style.width="100%";
   field.style.height="180px";
   $("log").prepend(field);
   field.select();
-  addLog("Select and copy the report text.");
+  log("Select and copy the report.");
  }
 }
 
-$("connectBtn").onclick=connectWallet;
-$("switchBtn").onclick=switchNetwork;
-$("recoverBtn").onclick=recoverDeployment;
-$("copyBtn").onclick=copyReport;
+$("connect").onclick=connect;
+$("switch").onclick=switchNetwork;
+$("verify").onclick=verify;
+$("copy").onclick=copyReport;
 
-if(window.ethereum?.on) {
+if(window.ethereum?.on){
  window.ethereum.on("chainChanged",()=>{
-  display(
-   "result",
-   "Network changed. Run recovery again.",
-   "warn"
-  );
-  refreshWallet().catch(()=>{});
+  resetChecks();
+  refresh().catch(()=>{});
  });
-
  window.ethereum.on("accountsChanged",()=>{
-  refreshWallet().catch(()=>{});
+  resetChecks();
+  refresh().catch(()=>{});
  });
 }
 
-refreshWallet().catch(error=>{
- display(
-  "wallet",
-  errorMessage(error),
-  "bad"
- );
+refresh().catch(e=>{
+ status("network",errorText(e),"bad");
 });
 
 </script>
