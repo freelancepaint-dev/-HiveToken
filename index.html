@@ -3,253 +3,131 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width, initial-scale=1">
-
-<title>HiveToken V5 - MetaMask Diagnostic</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HiveToken V5 Deployment Recovery</title>
 <style>
-* {
-  box-sizing: border-box;
+*{box-sizing:border-box}
+body{
+ margin:0;padding:18px;background:#0b100d;
+ color:#f4f5f0;font:16px Arial,sans-serif;
+ line-height:1.6
 }
-
-body {
-  margin: 0;
-  padding: 18px;
-  background: #0b100d;
-  color: #f4f5f0;
-  font: 16px Arial, sans-serif;
-  line-height: 1.6;
+main{
+ max-width:680px;margin:auto;padding:22px;
+ background:#171e18;border:1px solid #435344;
+ border-radius:18px
 }
-
-main {
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 22px;
-  background: #171e18;
-  border: 1px solid #435344;
-  border-radius: 18px;
+h1{color:#ffd45c;font-size:26px;margin-top:0}
+h2{font-size:19px}
+.panel{
+ background:#080c09;padding:16px;
+ border-radius:12px;margin:16px 0;
+ overflow-wrap:anywhere
 }
-
-h1 {
-  color: #ffd45c;
-  font-size: 26px;
-  margin-top: 0;
+button{
+ width:100%;padding:17px;margin:10px 0;
+ border:0;border-radius:12px;background:#ffd45c;
+ color:#141414;font-size:17px;font-weight:bold
 }
-
-h2 {
-  font-size: 19px;
-  margin: 0 0 10px;
-}
-
-.panel {
-  background: #080c09;
-  padding: 16px;
-  border-radius: 12px;
-  margin: 16px 0;
-  overflow-wrap: anywhere;
-}
-
-button {
-  display: block;
-  width: 100%;
-  padding: 17px 12px;
-  margin: 12px 0;
-  background: #ffd45c;
-  color: #141414;
-  border: 0;
-  border-radius: 12px;
-  font-size: 17px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.good {
-  color: #5bf28b;
-}
-
-.bad {
-  color: #ff7777;
-}
-
-.warn {
-  color: #ffd45c;
-}
-
-.muted {
-  color: #b7c1b7;
-}
-
-code {
-  font-family: monospace;
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-
-.value {
-  display: block;
-  margin-top: 5px;
-  overflow-wrap: anywhere;
-}
-
-hr {
-  border: 0;
-  border-top: 1px solid #354335;
-  margin: 16px 0;
-}
-
-a {
-  color: #ffd45c;
-}
-
-small {
-  color: #b7c1b7;
-}
-
+button:disabled{opacity:.45}
+.good{color:#5bf28b}
+.bad{color:#ff7777}
+.warn{color:#ffd45c}
+.muted{color:#b7c1b7}
+code{font-size:13px;overflow-wrap:anywhere}
+a{color:#ffd45c}
+hr{border:0;border-top:1px solid #354335;margin:15px 0}
+.value{display:block;margin:6px 0;overflow-wrap:anywhere}
 </style>
 </head>
-
 <body>
-
 <main>
 
 <h1>🐝 HiveToken V5</h1>
-
-<h2>MetaMask & Testnet Diagnostic</h2>
+<h2>Deployment Recovery</h2>
 
 <div class="panel">
-
-  <strong class="warn">
-    BSC TESTNET ONLY
-  </strong>
-
-  <p>
-    This page checks your MetaMask connection,
-    selected network, V5 token contract,
-    and PancakeSwap router.
-  </p>
-
-  <p class="good">
-    No transactions will be sent.
-  </p>
-
-  <p>
-    No token approvals, liquidity additions,
-    or deployments are available on this page.
-  </p>
-
+ <strong class="warn">BSC TESTNET ONLY</strong>
+ <p>
+  This page finds the actual contract address
+  from the saved V5 deployment transaction.
+ </p>
+ <p class="good">
+  Read-only. No approvals, liquidity,
+  deployments, or other transactions.
+ </p>
 </div>
 
 <div class="panel">
-
-  <strong>Expected network</strong>
-  <span class="value">
-    BSC Testnet — Chain ID 97
-  </span>
-
-  <hr>
-
-  <strong>V5 token address</strong>
-  <span class="value">
-    <code id="tokenAddress"></code>
-  </span>
-
-  <hr>
-
-  <strong>PancakeSwap V2 router</strong>
-  <span class="value">
-    <code id="routerAddress"></code>
-  </span>
-
+ <strong>Saved V5 deployment transaction</strong>
+ <span class="value"><code id="txHash"></code></span>
+ <hr>
+ <strong>Previously entered V5 address</strong>
+ <span class="value"><code id="oldAddress"></code></span>
+ <hr>
+ <strong>PancakeSwap router</strong>
+ <span class="value"><code id="routerAddress"></code></span>
 </div>
 
 <button id="connectBtn">
-  1. Connect MetaMask
+ 1. Connect MetaMask
 </button>
 
 <button id="switchBtn">
-  2. Switch to BSC Testnet
+ 2. Switch to BSC Testnet
 </button>
 
-<button id="checkBtn">
-  3. Run Contract Diagnostics
+<button id="recoverBtn">
+ 3. Recover V5 Deployment Address
 </button>
 
 <div class="panel">
-
-  <h2>Wallet status</h2>
-
-  <div id="walletStatus" class="warn">
-    Waiting for connection.
-  </div>
-
-  <hr>
-
-  <strong>Connected account</strong>
-  <div id="accountStatus" class="muted">
-    Not connected
-  </div>
-
-  <hr>
-
-  <strong>Active network</strong>
-  <div id="networkStatus" class="muted">
-    Not checked
-  </div>
-
+ <h2>Wallet</h2>
+ <div id="wallet" class="muted">Not checked</div>
+ <hr>
+ <strong>Active network</strong>
+ <div id="network" class="muted">Not checked</div>
 </div>
 
 <div class="panel">
-
-  <h2>Contract diagnostics</h2>
-
-  <strong>V5 token</strong>
-  <div id="tokenStatus" class="muted">
-    Not checked
-  </div>
-
-  <hr>
-
-  <strong>PancakeSwap router</strong>
-  <div id="routerStatus" class="muted">
-    Not checked
-  </div>
-
-  <hr>
-
-  <strong>Overall result</strong>
-  <div id="overallStatus" class="warn">
-    Run diagnostics after connecting
-    and switching networks.
-  </div>
-
+ <h2>Deployment transaction</h2>
+ <div id="transaction" class="muted">Not checked</div>
+ <hr>
+ <strong>Transaction status</strong>
+ <div id="receiptStatus" class="muted">Not checked</div>
+ <hr>
+ <strong>Recovered contract address</strong>
+ <div id="recovered" class="muted">Not checked</div>
 </div>
 
 <div class="panel">
+ <h2>Contract verification</h2>
+ <strong>Recovered V5 code</strong>
+ <div id="tokenCode" class="muted">Not checked</div>
+ <hr>
+ <strong>PancakeSwap router code</strong>
+ <div id="routerCode" class="muted">Not checked</div>
+ <hr>
+ <strong>Result</strong>
+ <div id="result" class="warn">
+  Connect and run recovery.
+ </div>
+</div>
 
-  <h2>Diagnostic log</h2>
-
-  <div id="log" class="muted">
-    Page loaded. Ready.
-  </div>
-
+<div class="panel">
+ <h2>Recovery log</h2>
+ <div id="log" class="muted">
+  Ready to inspect the saved transaction.
+ </div>
 </div>
 
 <button id="copyBtn">
-  Copy Diagnostic Report
+ Copy Recovery Report
 </button>
 
-<p>
-  <small>
-    If a check fails, copy the diagnostic report
-    or send a screenshot. Do not deploy V5 again
-    until the failure is understood.
-  </small>
+<p class="muted">
+ Do not add liquidity or deploy again until
+ the recovered address is verified.
 </p>
 
 </main>
@@ -257,796 +135,535 @@ small {
 <script>
 "use strict";
 
-/*
-  HiveToken V5
-  BSC Testnet diagnostic only.
+const DEPLOY_TX =
+"0x51b065e6012c9b19929a7ca84f0f57782178f4956bcb8269e8321e52c180d08b";
 
-  This page uses MetaMask's native
-  Ethereum provider.
-
-  No transaction methods are called.
-*/
-
-const TOKEN =
-  "0xe1d3c5d7e66fd41b87913d5c6b5b519ccd691a0a";
+const OLD_TOKEN =
+"0xe1d3c5d7e66fd41b87913d5c6b5b519ccd691a0a";
 
 const ROUTER =
-  "0xd99d1c33f9fc3444f8101754abc46c52416550d1";
+"0xd99d1c33f9fc3444f8101754abc46c52416550d1";
 
-const TESTNET_CHAIN_ID = "0x61";
+const TESTNET = "0x61";
 
-const TESTNET_PARAMS = {
-  chainId: TESTNET_CHAIN_ID,
-  chainName: "BSC Testnet",
-  nativeCurrency: {
-    name: "Test BNB",
-    symbol: "tBNB",
-    decimals: 18
-  },
-  rpcUrls: [
-    "https://bsc-testnet-dataseed.bnbchain.org"
-  ],
-  blockExplorerUrls: [
-    "https://testnet.bscscan.com"
-  ]
+const NETWORK_PARAMS = {
+ chainId: TESTNET,
+ chainName: "BSC Testnet",
+ nativeCurrency: {
+  name: "Test BNB",
+  symbol: "tBNB",
+  decimals: 18
+ },
+ rpcUrls: [
+  "https://bsc-testnet-dataseed.bnbchain.org"
+ ],
+ blockExplorerUrls: [
+  "https://testnet.bscscan.com"
+ ]
 };
 
-const $ = id =>
-  document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-const connectBtn = $("connectBtn");
-const switchBtn = $("switchBtn");
-const checkBtn = $("checkBtn");
-
-let connectedAccount = null;
-let currentChain = null;
-let lastReport = "";
-let working = false;
-
-$("tokenAddress").textContent = TOKEN;
+$("txHash").textContent = DEPLOY_TX;
+$("oldAddress").textContent = OLD_TOKEN;
 $("routerAddress").textContent = ROUTER;
 
-function log(message) {
-  const time = new Date().toLocaleTimeString();
+let busy = false;
+let report = [];
+let recoveredAddress = null;
 
-  const line = document.createElement("div");
-  line.textContent = "[" + time + "] " + message;
-
-  $("log").prepend(line);
+function display(id, value, style="muted") {
+ $(id).textContent = value;
+ $(id).className = style;
 }
 
-function setStatus(id, message, cls = "muted") {
-  const element = $(id);
-  element.textContent = message;
-  element.className = cls;
+function addLog(message) {
+ const time = new Date().toLocaleTimeString();
+ const entry = document.createElement("div");
+ entry.textContent = "[" + time + "] " + message;
+ $("log").prepend(entry);
+ report.push(message);
 }
 
-function cleanError(error) {
-  if (!error) {
-    return "Unknown error";
-  }
+function errorMessage(error) {
+ return String(
+  error?.data?.message ||
+  error?.message ||
+  error ||
+  "Unknown error"
+ );
+}
 
-  return String(
-    error.reason ||
-    error.data?.message ||
-    error.message ||
-    error
+function provider() {
+ if (!window.ethereum?.request) {
+  throw Error(
+   "MetaMask provider not found. Open this " +
+   "website inside MetaMask's browser."
   );
+ }
+ return window.ethereum;
 }
 
-function getEthereum() {
-  if (!window.ethereum ||
-      typeof window.ethereum.request !== "function") {
-    throw new Error(
-      "MetaMask provider not detected. " +
-      "Open this website in MetaMask's browser."
-    );
-  }
-
-  return window.ethereum;
+async function rpc(method, params=[]) {
+ return provider().request({method, params});
 }
 
-function validAddress(address) {
-  return /^0x[0-9a-fA-F]{40}$/.test(address);
+function isTestnet(chain) {
+ return String(chain).toLowerCase() === TESTNET;
 }
 
-function isTestnet(chainId) {
-  return (
-    String(chainId || "").toLowerCase() ===
-    TESTNET_CHAIN_ID
-  );
+function networkName(chain) {
+ const id = parseInt(chain,16);
+ if(id===97) return "BSC Testnet (97)";
+ if(id===56) return "BNB Mainnet (56)";
+ return "Chain ID " + id;
 }
 
-function chainDescription(chainId) {
-  if (!chainId) {
-    return "Unknown";
-  }
-
-  const number = parseInt(chainId, 16);
-
-  if (number === 97) {
-    return "BSC Testnet (Chain ID 97)";
-  }
-
-  if (number === 56) {
-    return "BNB Smart Chain Mainnet (Chain ID 56)";
-  }
-
-  if (number === 1) {
-    return "Ethereum Mainnet (Chain ID 1)";
-  }
-
-  return (
-    "Other network (Chain ID " +
-    number + ")"
-  );
+function setBusy(value) {
+ busy=value;
+ $("connectBtn").disabled=value;
+ $("switchBtn").disabled=value;
+ $("recoverBtn").disabled=value;
 }
 
-function resetContractResults() {
-  setStatus(
-    "tokenStatus",
-    "Not checked",
-    "muted"
-  );
+async function refreshWallet() {
+ const chain = await rpc("eth_chainId");
+ const accounts = await rpc("eth_accounts");
 
-  setStatus(
-    "routerStatus",
-    "Not checked",
-    "muted"
+ display(
+  "network",
+  networkName(chain),
+  isTestnet(chain) ? "good" : "bad"
+ );
+
+ display(
+  "wallet",
+  accounts.length
+   ? "Connected: " + accounts[0]
+   : "Account not connected",
+  accounts.length ? "good" : "warn"
+ );
+
+ return chain;
+}
+
+async function connectWallet() {
+ if(busy) return;
+ setBusy(true);
+
+ try {
+  const accounts = await rpc(
+   "eth_requestAccounts"
   );
 
-  setStatus(
-    "overallStatus",
-    "Run diagnostics after selecting BSC Testnet.",
+  if(!accounts.length) {
+   throw Error("No account returned.");
+  }
+
+  await refreshWallet();
+  addLog("MetaMask connected.");
+
+ } catch(error) {
+  display(
+   "wallet",
+   errorMessage(error),
+   "bad"
+  );
+  addLog("Connection error: "+errorMessage(error));
+
+ } finally {
+  setBusy(false);
+ }
+}
+
+async function switchNetwork() {
+ if(busy) return;
+ setBusy(true);
+
+ try {
+  try {
+   await rpc(
+    "wallet_switchEthereumChain",
+    [{chainId:TESTNET}]
+   );
+  } catch(error) {
+   if(Number(error.code)!==4902) throw error;
+
+   await rpc(
+    "wallet_addEthereumChain",
+    [NETWORK_PARAMS]
+   );
+
+   await rpc(
+    "wallet_switchEthereumChain",
+    [{chainId:TESTNET}]
+   );
+  }
+
+  const chain = await refreshWallet();
+
+  if(!isTestnet(chain)) {
+   throw Error("Chain ID 97 is not active.");
+  }
+
+  addLog("BSC Testnet selected.");
+
+ } catch(error) {
+  display(
+   "network",
+   "Switch failed: "+errorMessage(error),
+   "bad"
+  );
+  addLog("Network error: "+errorMessage(error));
+
+ } finally {
+  setBusy(false);
+ }
+}
+
+async function codeCheck(address,id,label) {
+ try {
+  const code = await rpc(
+   "eth_getCode",
+   [address,"latest"]
+  );
+
+  if(!code || code==="0x" || code==="0x0") {
+   display(
+    id,
+    "NO CONTRACT CODE at "+address,
+    "bad"
+   );
+   addLog(label+": no deployed code.");
+   return false;
+  }
+
+  const bytes = Math.floor(
+   (code.length-2)/2
+  );
+
+  display(
+   id,
+   "FOUND: "+bytes+" bytes of deployed code.",
+   "good"
+  );
+
+  addLog(
+   label+": contract code found ("+
+   bytes+" bytes)."
+  );
+
+  return true;
+
+ } catch(error) {
+  display(
+   id,
+   "RPC error: "+errorMessage(error),
+   "bad"
+  );
+
+  addLog(
+   label+" error: "+errorMessage(error)
+  );
+
+  return false;
+ }
+}
+
+async function recoverDeployment() {
+ if(busy) return;
+ setBusy(true);
+
+ recoveredAddress=null;
+ report=[];
+
+ display("transaction","Checking...","warn");
+ display("receiptStatus","Checking...","warn");
+ display("recovered","Not yet recovered","muted");
+ display("tokenCode","Not checked","muted");
+ display("routerCode","Not checked","muted");
+ display("result","Running recovery...","warn");
+
+ try {
+  const chain = await refreshWallet();
+
+  if(!isTestnet(chain)) {
+   throw Error(
+    "Wrong network. Switch to BSC Testnet first."
+   );
+  }
+
+  addLog(
+   "Looking up saved deployment transaction."
+  );
+
+  const tx = await rpc(
+   "eth_getTransactionByHash",
+   [DEPLOY_TX]
+  );
+
+  const receipt = await rpc(
+   "eth_getTransactionReceipt",
+   [DEPLOY_TX]
+  );
+
+  if(!tx && !receipt) {
+   display(
+    "transaction",
+    "Transaction not found on BSC Testnet.",
+    "bad"
+   );
+
+   display(
+    "receiptStatus",
+    "No transaction receipt found.",
+    "bad"
+   );
+
+   display(
+    "result",
+    "The saved transaction hash was not found " +
+    "on BSC Testnet. The hash or original " +
+    "deployment network may be incorrect.",
+    "bad"
+   );
+
+   addLog(
+    "Saved transaction not found on Chain ID 97."
+   );
+
+   return;
+  }
+
+  display(
+   "transaction",
+   "FOUND: "+DEPLOY_TX,
+   "good"
+  );
+
+  addLog("Transaction found on BSC Testnet.");
+
+  if(!receipt) {
+   display(
+    "receiptStatus",
+    "Transaction exists, but no receipt is " +
+    "available yet.",
     "warn"
-  );
-}
+   );
 
-function setWorking(value) {
-  working = value;
+   display(
+    "result",
+    "No confirmed deployment receipt. " +
+    "Do not redeploy until this is resolved.",
+    "warn"
+   );
 
-  connectBtn.disabled = value;
-  switchBtn.disabled = value;
-  checkBtn.disabled = value;
-}
+   return;
+  }
 
-async function refreshWalletStatus() {
-  const ethereum = getEthereum();
+  const successful =
+   receipt.status==="0x1" ||
+   receipt.status==="0x01";
 
-  const chainId = await ethereum.request({
-    method: "eth_chainId"
-  });
-
-  currentChain = chainId;
-
-  const accounts = await ethereum.request({
-    method: "eth_accounts"
-  });
-
-  connectedAccount =
-    accounts && accounts.length
-      ? accounts[0]
-      : null;
-
-  setStatus(
-    "networkStatus",
-    chainDescription(chainId),
-    isTestnet(chainId) ? "good" : "bad"
+  display(
+   "receiptStatus",
+   successful
+    ? "SUCCESS — included in block "+
+      parseInt(receipt.blockNumber,16)
+    : "FAILED or reverted transaction",
+   successful ? "good" : "bad"
   );
 
-  setStatus(
-    "accountStatus",
-    connectedAccount || "Not connected",
-    connectedAccount ? "good" : "muted"
+  if(!successful) {
+   display(
+    "result",
+    "The saved transaction did not complete " +
+    "successfully. No V5 address can be " +
+    "recovered from this receipt.",
+    "bad"
+   );
+   addLog("Deployment receipt indicates failure.");
+   return;
+  }
+
+  const created = receipt.contractAddress;
+
+  if(!created) {
+   display(
+    "recovered",
+    "No contract address in transaction receipt.",
+    "bad"
+   );
+
+   const destination = tx?.to || "null";
+
+   addLog(
+    "Transaction destination: "+destination
+   );
+
+   display(
+    "result",
+    "This transaction succeeded but did not " +
+    "directly deploy a contract. It may be a " +
+    "factory call or the saved hash may refer " +
+    "to a different action. Do not guess an address.",
+    "bad"
+   );
+
+   return;
+  }
+
+  recoveredAddress=created;
+
+  display(
+   "recovered",
+   created,
+   "good"
   );
 
-  if (connectedAccount) {
-    setStatus(
-      "walletStatus",
-      "MetaMask account connected.",
-      "good"
+  addLog(
+   "Receipt contract address: "+created
+  );
+
+  const tokenOK = await codeCheck(
+   created,
+   "tokenCode",
+   "Recovered V5"
+  );
+
+  const routerOK = await codeCheck(
+   ROUTER,
+   "routerCode",
+   "PancakeSwap router"
+  );
+
+  const finalChain = await rpc("eth_chainId");
+
+  if(!isTestnet(finalChain)) {
+   display(
+    "result",
+    "Network changed during recovery. " +
+    "Run the checks again.",
+    "bad"
+   );
+   return;
+  }
+
+  if(tokenOK && routerOK) {
+   const matches =
+    created.toLowerCase()===
+    OLD_TOKEN.toLowerCase();
+
+   if(matches) {
+    display(
+     "result",
+     "The receipt confirms the old address, " +
+     "and contract code is present. " +
+     "The earlier result may have been " +
+     "an RPC inconsistency.",
+     "good"
     );
+   } else {
+    display(
+     "result",
+     "DEPLOYMENT ADDRESS RECOVERED. " +
+     "The receipt identifies a different " +
+     "contract address from the one in our " +
+     "old page. Both contract-code checks " +
+     "passed. We must still verify that " +
+     "this contract is HiveToken V5 " +
+     "before enabling liquidity.",
+     "good"
+    );
+   }
+
+   addLog("Deployment recovery checks passed.");
+
   } else {
-    setStatus(
-      "walletStatus",
-      "MetaMask detected. Account not connected.",
-      "warn"
-    );
+   display(
+    "result",
+    "The transaction receipt was found, " +
+    "but one or more contract-code checks " +
+    "failed. Do not add liquidity.",
+    "bad"
+   );
   }
 
-  log(
-    "Active chain: " +
-    chainDescription(chainId)
+ } catch(error) {
+  const message=errorMessage(error);
+
+  display(
+   "result",
+   "RECOVERY ERROR: "+message,
+   "bad"
   );
 
-  return {
-    chainId,
-    account: connectedAccount
-  };
-}
-
-async function connectMetaMask() {
-  if (working) return;
-
-  setWorking(true);
-
-  try {
-    const ethereum = getEthereum();
-
-    log("Requesting MetaMask account connection.");
-
-    setStatus(
-      "walletStatus",
-      "Waiting for MetaMask...",
-      "warn"
-    );
-
-    const accounts = await ethereum.request({
-      method: "eth_requestAccounts"
-    });
-
-    if (!accounts || !accounts.length) {
-      throw new Error(
-        "MetaMask returned no accounts."
-      );
-    }
-
-    connectedAccount = accounts[0];
-
-    await refreshWalletStatus();
-
-    log("MetaMask connection successful.");
-
-    if (!isTestnet(currentChain)) {
-      setStatus(
-        "overallStatus",
-        "Wallet connected, but BSC Testnet " +
-        "is not active. Tap button 2.",
-        "warn"
-      );
-    } else {
-      setStatus(
-        "overallStatus",
-        "Wallet connected on BSC Testnet. " +
-        "Tap button 3.",
-        "good"
-      );
-    }
-
-  } catch (error) {
-    const message = cleanError(error);
-
-    setStatus(
-      "walletStatus",
-      "Connection failed: " + message,
-      "bad"
-    );
-
-    log("Connection error: " + message);
-
-  } finally {
-    setWorking(false);
-  }
-}
-
-async function switchToTestnet() {
-  if (working) return;
-
-  setWorking(true);
-
-  try {
-    const ethereum = getEthereum();
-
-    log("Requesting switch to BSC Testnet.");
-
-    setStatus(
-      "networkStatus",
-      "Waiting for network switch...",
-      "warn"
-    );
-
-    try {
-      await ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [
-          { chainId: TESTNET_CHAIN_ID }
-        ]
-      });
-
-    } catch (switchError) {
-
-      /*
-        4902 means the wallet does not
-        recognize the requested chain.
-        Only then request adding it.
-      */
-
-      if (Number(switchError.code) === 4902) {
-
-        log(
-          "BSC Testnet not recognized. " +
-          "Requesting network addition."
-        );
-
-        await ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [TESTNET_PARAMS]
-        });
-
-        await ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [
-            { chainId: TESTNET_CHAIN_ID }
-          ]
-        });
-
-      } else {
-        throw switchError;
-      }
-    }
-
-    const result = await refreshWalletStatus();
-
-    resetContractResults();
-
-    if (!isTestnet(result.chainId)) {
-      throw new Error(
-        "MetaMask did not switch to Chain ID 97."
-      );
-    }
-
-    setStatus(
-      "networkStatus",
-      "BSC Testnet active — Chain ID 97",
-      "good"
-    );
-
-    setStatus(
-      "overallStatus",
-      "BSC Testnet selected. " +
-      "Tap button 3 to check contracts.",
-      "good"
-    );
-
-    log("Successfully switched to BSC Testnet.");
-
-  } catch (error) {
-    const message = cleanError(error);
-
-    setStatus(
-      "networkStatus",
-      "Switch failed: " + message,
-      "bad"
-    );
-
-    setStatus(
-      "overallStatus",
-      "Network switch was not completed.",
-      "bad"
-    );
-
-    log("Network switch error: " + message);
-
-  } finally {
-    setWorking(false);
-  }
-}
-
-async function inspectContract(
-  ethereum,
-  address,
-  label,
-  statusId
-) {
-  if (!validAddress(address)) {
-    const message =
-      "INVALID ADDRESS: " + address;
-
-    setStatus(statusId, message, "bad");
-    log(label + ": " + message);
-
-    return {
-      ok: false,
-      label,
-      address,
-      result: message
-    };
-  }
-
-  setStatus(
-    statusId,
-    "Checking contract code...",
-    "warn"
-  );
-
-  try {
-    const code = await ethereum.request({
-      method: "eth_getCode",
-      params: [
-        address,
-        "latest"
-      ]
-    });
-
-    if (
-      !code ||
-      code === "0x" ||
-      code === "0x0"
-    ) {
-      const message =
-        "NO CONTRACT CODE at this address " +
-        "on the selected network.";
-
-      setStatus(statusId, message, "bad");
-
-      log(label + ": " + message);
-
-      return {
-        ok: false,
-        label,
-        address,
-        result: message
-      };
-    }
-
-    const byteCount =
-      Math.floor((code.length - 2) / 2);
-
-    const message =
-      "CONTRACT FOUND. " +
-      byteCount +
-      " bytes of deployed code detected.";
-
-    setStatus(statusId, message, "good");
-
-    log(label + ": " + message);
-
-    return {
-      ok: true,
-      label,
-      address,
-      result: message
-    };
-
-  } catch (error) {
-    const message =
-      "RPC CHECK FAILED: " +
-      cleanError(error);
-
-    setStatus(statusId, message, "bad");
-
-    log(label + ": " + message);
-
-    return {
-      ok: false,
-      label,
-      address,
-      result: message
-    };
-  }
-}
-
-async function runDiagnostics() {
-  if (working) return;
-
-  setWorking(true);
-
-  resetContractResults();
-
-  try {
-    const ethereum = getEthereum();
-
-    log("Starting diagnostic checks.");
-
-    const chainId = await ethereum.request({
-      method: "eth_chainId"
-    });
-
-    currentChain = chainId;
-
-    setStatus(
-      "networkStatus",
-      chainDescription(chainId),
-      isTestnet(chainId) ? "good" : "bad"
-    );
-
-    if (!isTestnet(chainId)) {
-      const message =
-        "WRONG NETWORK. Active: " +
-        chainDescription(chainId) +
-        ". Required: BSC Testnet (97).";
-
-      setStatus(
-        "overallStatus",
-        message,
-        "bad"
-      );
-
-      log(message);
-
-      lastReport = [
-        "HiveToken V5 Diagnostic",
-        "Network: " + chainDescription(chainId),
-        "Result: Wrong network",
-        "V5 token: " + TOKEN,
-        "Router: " + ROUTER
-      ].join("\n");
-
-      return;
-    }
-
-    const accounts = await ethereum.request({
-      method: "eth_accounts"
-    });
-
-    connectedAccount =
-      accounts && accounts.length
-        ? accounts[0]
-        : null;
-
-    setStatus(
-      "accountStatus",
-      connectedAccount || "Not connected",
-      connectedAccount ? "good" : "warn"
-    );
-
-    /*
-      Read-only checks.
-      Each address is checked separately.
-    */
-
-    const tokenResult = await inspectContract(
-      ethereum,
-      TOKEN,
-      "V5 token",
-      "tokenStatus"
-    );
-
-    const routerResult = await inspectContract(
-      ethereum,
-      ROUTER,
-      "PancakeSwap router",
-      "routerStatus"
-    );
-
-    let overall;
-
-    if (tokenResult.ok && routerResult.ok) {
-      overall =
-        "BOTH CONTRACTS FOUND on BSC Testnet. " +
-        "Contract code exists at both addresses. " +
-        "No transaction was submitted.";
-
-      setStatus(
-        "overallStatus",
-        overall,
-        "good"
-      );
-
-    } else if (
-      !tokenResult.ok &&
-      routerResult.ok
-    ) {
-      overall =
-        "V5 TOKEN CHECK FAILED. " +
-        "Router code was found. " +
-        "Verify the V5 deployment address " +
-        "and deployment network.";
-
-      setStatus(
-        "overallStatus",
-        overall,
-        "bad"
-      );
-
-    } else if (
-      tokenResult.ok &&
-      !routerResult.ok
-    ) {
-      overall =
-        "ROUTER CHECK FAILED. " +
-        "V5 token code was found. " +
-        "Verify the router address and RPC.";
-
-      setStatus(
-        "overallStatus",
-        overall,
-        "bad"
-      );
-
-    } else {
-      overall =
-        "BOTH CONTRACT CHECKS FAILED. " +
-        "Check the detailed results above. " +
-        "The wallet RPC or addresses may be wrong.";
-
-      setStatus(
-        "overallStatus",
-        overall,
-        "bad"
-      );
-    }
-
-    const finalChain = await ethereum.request({
-      method: "eth_chainId"
-    });
-
-    if (!isTestnet(finalChain)) {
-      overall =
-        "NETWORK CHANGED DURING CHECK. " +
-        "Results cannot be trusted. Retry.";
-
-      setStatus(
-        "overallStatus",
-        overall,
-        "bad"
-      );
-    }
-
-    lastReport = [
-      "HiveToken V5 Diagnostic",
-      "Date: " + new Date().toISOString(),
-      "Wallet: " +
-        (connectedAccount || "Not connected"),
-      "Network: " + chainDescription(finalChain),
-      "",
-      "V5 token:",
-      TOKEN,
-      tokenResult.result,
-      "",
-      "PancakeSwap router:",
-      ROUTER,
-      routerResult.result,
-      "",
-      "Overall:",
-      overall,
-      "",
-      "Read-only diagnostic.",
-      "No transaction submitted."
-    ].join("\n");
-
-    log("Diagnostic checks completed.");
-
-  } catch (error) {
-    const message = cleanError(error);
-
-    setStatus(
-      "overallStatus",
-      "DIAGNOSTIC ERROR: " + message,
-      "bad"
-    );
-
-    log("Diagnostic error: " + message);
-
-    lastReport =
-      "HiveToken V5 Diagnostic\n" +
-      "Error: " + message;
-
-  } finally {
-    setWorking(false);
-  }
+  addLog("Recovery error: "+message);
+
+ } finally {
+  setBusy(false);
+ }
 }
 
 async function copyReport() {
-  const report =
-    lastReport ||
-    "No diagnostic report yet. " +
-    "Run button 3 first.";
+ const text = [
+  "HiveToken V5 Deployment Recovery",
+  "Saved transaction: "+DEPLOY_TX,
+  "Old V5 address: "+OLD_TOKEN,
+  "Recovered address: "+
+   (recoveredAddress||"Not recovered"),
+  "Network: "+$("network").textContent,
+  "Transaction: "+$("transaction").textContent,
+  "Receipt: "+$("receiptStatus").textContent,
+  "V5 code: "+$("tokenCode").textContent,
+  "Router code: "+$("routerCode").textContent,
+  "Result: "+$("result").textContent,
+  "",
+  ...report
+ ].join("\n");
 
-  try {
-    await navigator.clipboard.writeText(report);
-
-    log("Diagnostic report copied.");
-
-  } catch (error) {
-
-    const box = document.createElement("textarea");
-    box.value = report;
-
-    box.style.width = "100%";
-    box.style.minHeight = "180px";
-
-    $("log").prepend(box);
-
-    box.focus();
-    box.select();
-
-    log(
-      "Select and copy the report text above."
-    );
-  }
+ try {
+  await navigator.clipboard.writeText(text);
+  addLog("Recovery report copied.");
+ } catch(error) {
+  const field=document.createElement("textarea");
+  field.value=text;
+  field.style.width="100%";
+  field.style.height="180px";
+  $("log").prepend(field);
+  field.select();
+  addLog("Select and copy the report text.");
+ }
 }
 
-connectBtn.addEventListener(
-  "click",
-  connectMetaMask
-);
+$("connectBtn").onclick=connectWallet;
+$("switchBtn").onclick=switchNetwork;
+$("recoverBtn").onclick=recoverDeployment;
+$("copyBtn").onclick=copyReport;
 
-switchBtn.addEventListener(
-  "click",
-  switchToTestnet
-);
-
-checkBtn.addEventListener(
-  "click",
-  runDiagnostics
-);
-
-$("copyBtn").addEventListener(
-  "click",
-  copyReport
-);
-
-if (window.ethereum?.on) {
-
-  window.ethereum.on(
-    "chainChanged",
-    async function(chainId) {
-      currentChain = chainId;
-
-      resetContractResults();
-
-      setStatus(
-        "networkStatus",
-        chainDescription(chainId),
-        isTestnet(chainId) ? "good" : "bad"
-      );
-
-      log(
-        "Network changed to " +
-        chainDescription(chainId)
-      );
-    }
+if(window.ethereum?.on) {
+ window.ethereum.on("chainChanged",()=>{
+  display(
+   "result",
+   "Network changed. Run recovery again.",
+   "warn"
   );
+  refreshWallet().catch(()=>{});
+ });
 
-  window.ethereum.on(
-    "accountsChanged",
-    function(accounts) {
-      connectedAccount =
-        accounts && accounts.length
-          ? accounts[0]
-          : null;
-
-      setStatus(
-        "accountStatus",
-        connectedAccount || "Not connected",
-        connectedAccount ? "good" : "warn"
-      );
-
-      resetContractResults();
-
-      log("Wallet account changed.");
-    }
-  );
+ window.ethereum.on("accountsChanged",()=>{
+  refreshWallet().catch(()=>{});
+ });
 }
 
-/*
-  Automatically display the current
-  network and existing wallet permission
-  without requesting a new connection.
-*/
-
-(async function initialize() {
-  try {
-    await refreshWalletStatus();
-
-    log("MetaMask provider detected.");
-
-  } catch (error) {
-    setStatus(
-      "walletStatus",
-      cleanError(error),
-      "bad"
-    );
-
-    log(
-      "Initialization error: " +
-      cleanError(error)
-    );
-  }
-})();
+refreshWallet().catch(error=>{
+ display(
+  "wallet",
+  errorMessage(error),
+  "bad"
+ );
+});
 
 </script>
-
 </body>
 </html>
