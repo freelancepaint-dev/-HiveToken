@@ -1,0 +1,290 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HiveToken V6 — Testnet Deployment</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#0b100d;color:#f5f6f2;font:16px Arial,sans-serif;line-height:1.6}
+main{max-width:680px;margin:auto;padding:20px;background:#172019;border:1px solid #405342;border-radius:18px}
+h1{color:#ffd45c;font-size:26px}
+.panel{background:#080d09;padding:17px;border-radius:13px;margin:16px 0;overflow-wrap:anywhere}
+button{display:block;width:100%;padding:16px;margin:12px 0;border:0;border-radius:12px;background:#ffd45c;color:#111;font-size:17px;font-weight:bold}
+button:disabled{opacity:.4}
+input{width:100%;padding:14px;background:#fff;color:#111;border-radius:9px;border:0;font-size:15px}
+.good{color:#65f391}
+.bad{color:#ff7979}
+.warn{color:#ffd45c}
+small{color:#bdc5bd}
+</style>
+</head>
+<body>
+<main>
+<h1>🐝 HiveToken V6</h1>
+<p class="warn">BSC TESTNET ONLY — NEW DEPLOYMENT</p>
+
+<div class="panel">
+<strong>Important</strong>
+<p>This creates a NEW token contract. It does not upgrade V5, transfer existing liquidity, or move existing tokens.</p>
+<p>Do not deploy until the V6 source code and constructor arguments have been reviewed.</p>
+</div>
+
+<button id="connect">1. Connect MetaMask</button>
+<button id="check">2. Check V6 Deployment</button>
+<button id="simulate" disabled>3. Simulate Deployment</button>
+<button id="deploy" disabled>4. Deploy V6 on Testnet</button>
+
+<div class="panel">
+<h3>Deployment Settings</h3>
+<label>V2 Router Address</label>
+<input id="router" value="0xd99d1c33f9fc3444f8101754abc46c52416550d1">
+<p><small>PancakeSwap V2 Router — BSC Testnet</small></p>
+
+<label>Funding Receiver Address</label>
+<input id="receiver" value="0xd22d8d7a8a3A3A7293168B5c83413060fD11ECe1">
+<p><small>Existing test receiver. Confirm that V6 uses the same constructor parameters before deploying.</small></p>
+</div>
+
+<div class="panel">
+<h3>Wallet</h3>
+<div id="wallet">Not connected</div>
+<h3>Network</h3>
+<div id="network">Not checked</div>
+<h3>Bytecode</h3>
+<div id="bytecode">Not checked</div>
+<h3>Gas Estimate</h3>
+<div id="gas">Not estimated</div>
+</div>
+
+<div class="panel">
+<h3>Status</h3>
+<div id="status" class="warn">Ready for checks.</div>
+<h3>New V6 Contract Address</h3>
+<div id="address">Not deployed</div>
+<h3>Transaction Hash</h3>
+<div id="hash">Not submitted</div>
+</div>
+
+<p><small>Never approve an unexpected wallet transaction. Keep enough tBNB for deployment gas.</small></p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="./hive-v6-bytecode.js"></script>
+
+<script>
+"use strict";
+
+const CHAIN_ID=97;
+const CHAIN_HEX="0x61";
+
+const $=id=>document.getElementById(id);
+
+let provider;
+let signer;
+let factory;
+let deploymentTx;
+let checked=false;
+let simulated=false;
+let busy=false;
+
+function status(message,type="warn"){
+ $("status").textContent=message;
+ $("status").className=type;
+}
+
+function errorText(e){
+ return String(e?.reason||e?.error?.message||e?.message||e);
+}
+
+function update(){
+ $("connect").disabled=busy;
+ $("check").disabled=busy;
+ $("simulate").disabled=busy||!checked;
+ $("deploy").disabled=busy||!checked||!simulated;
+}
+
+function invalidate(){
+ checked=false;
+ simulated=false;
+ factory=null;
+ $("gas").textContent="Not estimated";
+ update();
+}
+
+async function requireWallet(){
+ if(!window.ethereum?.request)throw Error("Open in MetaMask browser.");
+ if(!window.ethers)throw Error("Ethers library unavailable.");
+
+ provider=new ethers.providers.Web3Provider(window.ethereum,"any");
+
+ const network=await provider.getNetwork();
+ $("network").textContent=network.chainId===CHAIN_ID
+  ?"BSC Testnet (97)"
+  :"Wrong network: "+network.chainId;
+
+ if(network.chainId!==CHAIN_ID)throw Error("Switch to BSC Testnet.");
+
+ const accounts=await provider.listAccounts();
+ if(!accounts.length)throw Error("Connect your wallet first.");
+
+ $("wallet").textContent=accounts[0];
+ signer=provider.getSigner();
+ return accounts[0];
+}
+
+async function connect(){
+ busy=true;update();
+ try{
+  if(!window.ethereum?.request)throw Error("Open in MetaMask browser.");
+  await window.ethereum.request({
+   method:"wallet_switchEthereumChain",
+   params:[{chainId:CHAIN_HEX}]
+  });
+  await window.ethereum.request({method:"eth_requestAccounts"});
+  invalidate();
+  await requireWallet();
+  status("Wallet connected. Check deployment next.","good");
+ }catch(e){status(errorText(e),"bad");}
+ finally{busy=false;update();}
+}
+
+function deploymentFactory(){
+ const bytecode=window.HIVE_V6_BYTECODE;
+
+ if(typeof bytecode!=="string"||
+    !/^0x[0-9a-fA-F]+$/.test(bytecode)||
+    bytecode.length<100){
+  throw Error("V6 bytecode missing or invalid.");
+ }
+
+ $("bytecode").textContent=
+  "Loaded ("+((bytecode.length-2)/2)+" bytes)";
+
+ // Constructor ABI must match HiveTokenV6.sol exactly.
+ const abi=[
+  "constructor(address routerAddress,address hiveFundingAddress)"
+ ];
+
+ return new ethers.ContractFactory(abi,bytecode,signer);
+}
+
+async function prepare(){
+ await requireWallet();
+
+ const router=$("router").value.trim();
+ const receiver=$("receiver").value.trim();
+
+ if(!ethers.utils.isAddress(router))throw Error("Invalid router address.");
+ if(!ethers.utils.isAddress(receiver))throw Error("Invalid receiver address.");
+ if(router.toLowerCase()===receiver.toLowerCase())
+  throw Error("Router and receiver cannot be identical.");
+
+ const [routerCode,receiverCode]=await Promise.all([
+  provider.getCode(router),
+  provider.getCode(receiver)
+ ]);
+
+ if(routerCode==="0x")throw Error("Router contract not found.");
+ if(receiverCode==="0x")throw Error("Receiver contract not found.");
+
+ factory=deploymentFactory();
+
+ const tx=factory.getDeployTransaction(router,receiver);
+ if(!tx.data||tx.data==="0x")throw Error("Deployment data missing.");
+
+ return {router,receiver,tx};
+}
+
+async function check(){
+ busy=true;invalidate();update();
+ try{
+  await prepare();
+  checked=true;
+  status("Checks passed. Next simulate deployment.","good");
+ }catch(e){status("Check failed: "+errorText(e),"bad");}
+ finally{busy=false;update();}
+}
+
+async function simulate(){
+ if(!checked)return;
+ busy=true;simulated=false;update();
+
+ try{
+  const {tx}=await prepare();
+  const from=await signer.getAddress();
+
+  // Estimate deployment gas. This is not a guarantee of success.
+  const gas=await provider.estimateGas({...tx,from});
+  $("gas").textContent=gas.toString()+" units";
+
+  // eth_call may return deployment runtime code.
+  // Some RPCs do not support contract-creation eth_call.
+  const result=await provider.call({...tx,from});
+  if(!result||result==="0x"){
+   throw Error("Deployment simulation returned no runtime code.");
+  }
+
+  simulated=true;
+  status("Simulation passed. Review source and addresses before deploying.","good");
+ }catch(e){
+  status("Simulation failed: "+errorText(e),"bad");
+ }finally{busy=false;update();}
+}
+
+async function deploy(){
+ if(!checked||!simulated)return;
+
+ const confirmation=window.confirm(
+  "Deploy a NEW HiveToken V6 contract on BSC Testnet? "+
+  "This does NOT upgrade V5 or move liquidity."
+ );
+ if(!confirmation)return;
+
+ busy=true;update();
+
+ try{
+  const {router,receiver,tx}=await prepare();
+  const from=await signer.getAddress();
+
+  const gas=await provider.estimateGas({...tx,from});
+  const gasLimit=gas.mul(120).div(100);
+
+  status("Waiting for MetaMask confirmation...");
+
+  deploymentTx=await factory.deploy(router,receiver,{gasLimit});
+
+  $("hash").textContent=deploymentTx.deployTransaction.hash;
+  status("Transaction submitted. Waiting for confirmation...");
+
+  const receipt=await deploymentTx.deployTransaction.wait(1);
+  if(receipt.status!==1)throw Error("Deployment reverted.");
+
+  $("address").textContent=deploymentTx.address;
+  status("V6 deployed on BSC Testnet. Verify the contract before configuring liquidity.","good");
+
+  checked=false;
+  simulated=false;
+ }catch(e){
+  status("Deployment not confirmed: "+errorText(e),"bad");
+ }finally{busy=false;update();}
+}
+
+$("connect").onclick=connect;
+$("check").onclick=check;
+$("simulate").onclick=simulate;
+$("deploy").onclick=deploy;
+
+if(window.ethereum?.on){
+ window.ethereum.on("accountsChanged",invalidate);
+ window.ethereum.on("chainChanged",invalidate);
+}
+
+$("router").addEventListener("input",invalidate);
+$("receiver").addEventListener("input",invalidate);
+
+update();
+</script>
+</body>
+</html>
