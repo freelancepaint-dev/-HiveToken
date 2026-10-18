@@ -31,7 +31,7 @@ jobs:
       - name: Install Solidity compiler
         run: npm install --no-save solc@0.8.20
 
-      - name: Compile V4 V5 and Test Receiver
+      - name: Compile V4 V5 V6 and Test Receiver
         run: |
           set -eu
           rm -rf build
@@ -41,6 +41,7 @@ jobs:
             contracts/HiveToken.sol \
             contracts/TestHiveReceiver.sol \
             contracts/HiveTokenV5.sol \
+            contracts/HiveTokenV6.sol \
             -o build
 
           test -s build/contracts_HiveToken_sol_HiveToken.bin
@@ -52,7 +53,10 @@ jobs:
           test -s build/contracts_HiveTokenV5_sol_HiveTokenV5.bin
           test -s build/contracts_HiveTokenV5_sol_HiveTokenV5.abi
 
-          echo "All three contracts compiled successfully."
+          test -s build/contracts_HiveTokenV6_sol_HiveTokenV6.bin
+          test -s build/contracts_HiveTokenV6_sol_HiveTokenV6.abi
+
+          echo "All four contracts compiled successfully."
 
       - name: Generate V4 deployment files
         run: |
@@ -82,6 +86,21 @@ jobs:
 
           echo "V5 deployment bytecode and ABI generated."
 
+      - name: Generate V6 deployment files
+        run: |
+          set -eu
+
+          V6_BIN=$(cat build/contracts_HiveTokenV6_sol_HiveTokenV6.bin)
+
+          printf "window.HIVE_V6_BYTECODE='0x%s';\n" "$V6_BIN" > hive-v6-bytecode.js
+
+          cp build/contracts_HiveTokenV6_sol_HiveTokenV6.abi hive-v6-abi.json
+
+          test -s hive-v6-bytecode.js
+          test -s hive-v6-abi.json
+
+          echo "V6 deployment bytecode and ABI generated."
+
       - name: Verify generated deployment files
         run: |
           set -eu
@@ -90,7 +109,9 @@ jobs:
             hive-bytecode.js \
             test-hive-receiver-bytecode.js \
             hive-v5-bytecode.js \
-            hive-v5-abi.json
+            hive-v5-abi.json \
+            hive-v6-bytecode.js \
+            hive-v6-abi.json
           do
             test -s "$file"
             echo "Verified: $file"
@@ -107,12 +128,14 @@ jobs:
             hive-bytecode.js \
             test-hive-receiver-bytecode.js \
             hive-v5-bytecode.js \
-            hive-v5-abi.json
+            hive-v5-abi.json \
+            hive-v6-bytecode.js \
+            hive-v6-abi.json
 
           if git diff --cached --quiet; then
             echo "No deployment file changes."
             exit 0
           fi
 
-          git commit -m "Generate V4 and V5 deployment artifacts"
+          git commit -m "Generate V4 V5 and V6 deployment artifacts"
           git push
