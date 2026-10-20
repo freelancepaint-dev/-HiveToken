@@ -2,36 +2,214 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HiveToken V6 Liquidity</title>
-  <style>
-    body {
-      background: #111b14;
-      color: #f5f1df;
-      font-family: Arial, sans-serif;
-      padding: 24px;
-      max-width: 650px;
-      margin: auto;
-    }
-    h1 { color: #ffd45c; }
-    .panel {
-      background: #080d09;
-      border-radius: 16px;
-      padding: 20px;
-      margin-top: 20px;
-    }
-    .warning { color: #ffd45c; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HiveToken V6 Liquidity</title>
+<style>
+*{box-sizing:border-box}
+body{background:#111b14;color:#f5f1df;font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:20px}
+h1{color:#ffd45c}
+.panel{background:#080d09;border:1px solid #354437;border-radius:16px;padding:20px;margin:18px 0}
+button{display:block;width:100%;padding:16px;margin:12px 0;border:0;border-radius:12px;background:#ffd45c;color:#151515;font-size:17px;font-weight:bold}
+button:disabled{opacity:.4}
+input{width:100%;padding:15px;margin:8px 0 16px;border-radius:10px;font-size:18px}
+small{color:#aeb9ad}
+#status{white-space:pre-wrap;overflow-wrap:anywhere}
+.warning{color:#ffd45c}
+</style>
 </head>
 <body>
-  <h1>🐝 HiveToken V6 Liquidity</h1>
-  <p class="warning">BSC TESTNET ONLY</p>
+<h1>🐝 HiveToken V6 Liquidity</h1>
+<p class="warning">BSC TESTNET ONLY — EXPERIMENTAL</p>
 
-  <div class="panel">
-    <h2>Liquidity Setup</h2>
-    <p>HiveToken V6 liquidity preparation page.</p>
-    <p>No transactions are enabled yet.</p>
-  </div>
+<div class="panel">
+<h2>1. Wallet</h2>
+<button id="connect">Connect MetaMask</button>
+<p id="wallet">Not connected</p>
+<p id="balances">Balances not loaded</p>
+</div>
+
+<div class="panel">
+<h2>2. Add Liquidity</h2>
+<label>HIVE amount</label>
+<input id="hiveAmount" type="text" inputmode="decimal" value="10000">
+<label>tBNB amount</label>
+<input id="bnbAmount" type="text" inputmode="decimal" value="0.01">
+<small>Initial liquidity example: 10,000 HIVE + 0.01 tBNB. Confirm the ratio before approving.</small>
+<button id="approve" disabled>Approve HIVE</button>
+<button id="liquidity" disabled>Add Liquidity</button>
+</div>
+
+<div class="panel">
+<h2>3. Pair Status</h2>
+<button id="refresh" disabled>Refresh Pair Status</button>
+<p id="pair">Not checked</p>
+<p id="locked">Not checked</p>
+<p class="warning">Pair locking is intentionally not automated. Verify the pair and liquidity before locking.</p>
+</div>
+
+<div class="panel">
+<h2>Status</h2>
+<p id="status">Connect your wallet to begin.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+<script>
+const TOKEN="0xaFF7eC0cA922debD79537d6c59F5a5852ED8cB80";
+const ROUTER="0xd99d1c33f9fc3444f8101754abc46c52416550d1";
+const CHAIN="0x61";
+
+const tokenABI=[
+"function balanceOf(address) view returns(uint256)",
+"function allowance(address,address) view returns(uint256)",
+"function approve(address,uint256) returns(bool)",
+"function pair() view returns(address)",
+"function pairLocked() view returns(bool)",
+"function owner() view returns(address)"
+];
+
+const routerABI=[
+"function WETH() pure returns(address)",
+"function factory() pure returns(address)",
+"function addLiquidityETH(address,uint256,uint256,uint256,address,uint256) payable returns(uint256,uint256,uint256)"
+];
+
+const factoryABI=[
+"function getPair(address,address) view returns(address)"
+];
+
+let provider, signer, account, token, router;
+
+const $=id=>document.getElementById(id);
+const status=message=>$("status").textContent=message;
+const zero="0x0000000000000000000000000000000000000000";
+
+async function ensureNetwork(){
+ const id=await window.ethereum.request({method:"eth_chainId"});
+ if(id!==CHAIN){
+  await window.ethereum.request({
+   method:"wallet_switchEthereumChain",
+   params:[{chainId:CHAIN}]
+  });
+ }
+}
+
+async function connect(){
+ try{
+  if(!window.ethereum)throw Error("Open in MetaMask browser.");
+  if(!window.ethers)throw Error("Ethers library did not load.");
+  await ensureNetwork();
+  provider=new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts",[]);
+  signer=await provider.getSigner();
+  account=await signer.getAddress();
+  token=new ethers.Contract(TOKEN,tokenABI,signer);
+  router=new ethers.Contract(ROUTER,routerABI,signer);
+  $("wallet").textContent=account;
+  $("approve").disabled=false;
+  $("liquidity").disabled=false;
+  $("refresh").disabled=false;
+  status("Connected. Review amounts before transactions.");
+  await refresh();
+ }catch(e){status(e.shortMessage||e.message)}
+}
+
+async function refresh(){
+ try{
+  if(!account)throw Error("Connect first.");
+  const [hive,bnb,locked,pair,weth,factoryAddress]=await Promise.all([
+   token.balanceOf(account),
+   provider.getBalance(account),
+   token.pairLocked(),
+   token.pair(),
+   router.WETH(),
+   router.factory()
+  ]);
+  $("balances").textContent=
+   "HIVE: "+ethers.formatUnits(hive,18)+
+   "\ntBNB: "+ethers.formatEther(bnb);
+  const factory=new ethers.Contract(factoryAddress,factoryABI,provider);
+  const actualPair=await factory.getPair(TOKEN,weth);
+  $("pair").textContent="Factory pair: "+actualPair+
+   "\nToken configured pair: "+pair;
+  $("locked").textContent="Pair locked: "+locked;
+  if(locked&&pair.toLowerCase()!==actualPair.toLowerCase())
+   status("WARNING: Configured pair differs from factory pair.");
+ }catch(e){status(e.shortMessage||e.message)}
+}
+
+function amounts(){
+ const hive=ethers.parseUnits($("hiveAmount").value.trim(),18);
+ const bnb=ethers.parseEther($("bnbAmount").value.trim());
+ if(hive<=0n||bnb<=0n)throw Error("Amounts must be positive.");
+ return {hive,bnb};
+}
+
+async function approve(){
+ try{
+  const {hive}=amounts();
+  const allowance=await token.allowance(account,ROUTER);
+  if(allowance>=hive){
+   status("Sufficient HIVE allowance already exists.");
+   return;
+  }
+  status("Review the HIVE approval in MetaMask.");
+  const tx=await token.approve(ROUTER,hive);
+  status("Approval submitted: "+tx.hash);
+  await tx.wait();
+  status("HIVE approval confirmed.");
+ }catch(e){status(e.shortMessage||e.message)}
+}
+
+async function addLiquidity(){
+ try{
+  const {hive,bnb}=amounts();
+  const allowance=await token.allowance(account,ROUTER);
+  if(allowance<hive)throw Error("Approve HIVE first.");
+
+  const [hiveBalance,bnbBalance]=await Promise.all([
+   token.balanceOf(account),
+   provider.getBalance(account)
+  ]);
+  if(hiveBalance<hive)throw Error("Insufficient HIVE.");
+  if(bnbBalance<=bnb)throw Error("Need additional tBNB for gas.");
+
+  const weth=await router.WETH();
+  const factoryAddress=await router.factory();
+  const factory=new ethers.Contract(factoryAddress,factoryABI,provider);
+  const existingPair=await factory.getPair(TOKEN,weth);
+
+  if(existingPair!==zero){
+   throw Error(
+    "A liquidity pair already exists. This page only supports initial liquidity. No transaction sent."
+   );
+  }
+
+  const deadline=Math.floor(Date.now()/1000)+1200;
+  const minHive=hive*95n/100n;
+  const minBnb=bnb*95n/100n;
+
+  status("Review INITIAL liquidity transaction in MetaMask.");
+  const tx=await router.addLiquidityETH(
+   TOKEN,hive,minHive,minBnb,account,deadline,
+   {value:bnb}
+  );
+  status("Liquidity transaction submitted: "+tx.hash);
+  await tx.wait();
+  status("Liquidity transaction confirmed. Verify pair before locking.");
+  await refresh();
+ }catch(e){status(e.shortMessage||e.message)}
+}
+
+$("connect").onclick=connect;
+$("refresh").onclick=refresh;
+$("approve").onclick=approve;
+$("liquidity").onclick=addLiquidity;
+
+if(window.ethereum){
+ window.ethereum.on("accountsChanged",()=>location.reload());
+ window.ethereum.on("chainChanged",()=>location.reload());
+}
+</script>
 </body>
 </html>
