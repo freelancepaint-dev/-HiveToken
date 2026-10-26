@@ -1,0 +1,201 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HIVE V7 Mainnet Deployment</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#0b100d;color:#f5f6f2;font:16px/1.6 Arial,sans-serif}
+main{max-width:680px;margin:auto}
+h1{color:#ffd45c;font-size:26px}
+.panel{background:#172019;border:1px solid #405342;border-radius:15px;padding:18px;margin:16px 0;overflow-wrap:anywhere}
+button{display:block;width:100%;padding:15px;margin:12px 0;border:0;border-radius:11px;background:#ffd45c;color:#111;font-size:17px;font-weight:bold}
+button:disabled{background:#666;color:#ddd}
+.good{color:#65f391}
+.bad{color:#ff7979}
+.warn{color:#ffd45c}
+small{color:#bdc5bd}
+code{overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+
+<h1>🐝 HIVE V7 Mainnet Deployment</h1>
+<p class="warn">BNB SMART CHAIN MAINNET — SAFETY CHECK MODE</p>
+
+<div class="panel">
+<h3>Deployment Configuration</h3>
+<p><b>Network:</b> BSC Mainnet (56)</p>
+<p><b>Total Supply:</b> 1,000,000 HIVE</p>
+<p><b>Liquidity Plan:</b> 850,000 HIVE + approximately $300 BNB</p>
+<p><b>PancakeSwap V2 Router:</b></p>
+<small><code id="router"></code></small>
+<p><b>BnBee Funding Receiver:</b></p>
+<small><code id="receiver"></code></small>
+</div>
+
+<div class="panel">
+<h3>1. Wallet Connection</h3>
+<button id="connect">Connect MetaMask</button>
+<p id="wallet">Not connected</p>
+<p id="network">Network not checked</p>
+</div>
+
+<div class="panel">
+<h3>2. Mainnet Contract Checks</h3>
+<button id="check">Check Router, Receiver &amp; Bytecode</button>
+<p id="routerStatus">Router: Not checked</p>
+<p id="receiverStatus">Receiver: Not checked</p>
+<p id="bytecodeStatus">V7 bytecode: Not checked</p>
+<p id="status" class="warn">Waiting for checks.</p>
+</div>
+
+<div class="panel">
+<h3>3. Deploy HIVE V7</h3>
+<p class="warn">Deployment is disabled until source-code verification, receiver compatibility, and deployment simulation are complete.</p>
+<button disabled>Deploy HIVE V7 — Locked</button>
+</div>
+
+<div class="panel">
+<h3>Important</h3>
+<p>This page does not create tokens, add liquidity, approve spending, or execute funding.</p>
+<p>HIVE V7 is unaudited. A successful bytecode loading check does not prove the bytecode matches the reviewed Solidity source.</p>
+<p>Never share your private key or recovery phrase.</p>
+</div>
+
+</main>
+
+<script src="./hive-v7-bytecode.js"></script>
+<script>
+"use strict";
+
+const CHAIN_ID = "0x38";
+const ROUTER =
+  "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+const RECEIVER =
+  "0x9dE16778D63953B3F778128B1D5cA0c88B797c72";
+
+const $ = id => document.getElementById(id);
+
+$("router").textContent = ROUTER;
+$("receiver").textContent = RECEIVER;
+
+function showStatus(message, type = "warn") {
+  $("status").textContent = message;
+  $("status").className = type;
+}
+
+function requireWallet() {
+  if (!window.ethereum?.request) {
+    throw Error("Open this page inside MetaMask browser.");
+  }
+}
+
+async function checkNetwork() {
+  requireWallet();
+
+  const chain = await window.ethereum.request({
+    method: "eth_chainId"
+  });
+
+  if (chain !== CHAIN_ID) {
+    $("network").textContent =
+      "Wrong network: " + parseInt(chain, 16);
+    $("network").className = "bad";
+    throw Error("Switch MetaMask to BSC Mainnet.");
+  }
+
+  $("network").textContent = "BSC Mainnet (56) — Connected";
+  $("network").className = "good";
+}
+
+$("connect").onclick = async function () {
+  try {
+    requireWallet();
+
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts"
+    });
+
+    await checkNetwork();
+
+    $("wallet").textContent =
+      accounts.length ? "Connected: " + accounts[0] :
+      "No wallet connected";
+
+    showStatus("Wallet connected. Run contract checks next.", "good");
+  } catch (error) {
+    showStatus(error.message || String(error), "bad");
+  }
+};
+
+$("check").onclick = async function () {
+  const button = $("check");
+  button.disabled = true;
+
+  try {
+    await checkNetwork();
+
+    const addresses = [ROUTER, RECEIVER];
+
+    const codes = await Promise.all(
+      addresses.map(address =>
+        window.ethereum.request({
+          method: "eth_getCode",
+          params: [address, "latest"]
+        })
+      )
+    );
+
+    if (!codes[0] || codes[0] === "0x") {
+      throw Error("Router contract not found on Mainnet.");
+    }
+
+    $("routerStatus").textContent =
+      "Router: Contract exists on Mainnet";
+    $("routerStatus").className = "good";
+
+    if (!codes[1] || codes[1] === "0x") {
+      throw Error("BnBee receiver contract not found.");
+    }
+
+    $("receiverStatus").textContent =
+      "Receiver: Contract exists on Mainnet";
+    $("receiverStatus").className = "good";
+
+    const bytecode = window.HIVE_V7_BYTECODE;
+
+    if (
+      typeof bytecode !== "string" ||
+      !/^0x[0-9a-fA-F]+$/.test(bytecode) ||
+      bytecode.length < 100 ||
+      bytecode.length % 2 !== 0
+    ) {
+      throw Error("V7 deployment bytecode missing or invalid.");
+    }
+
+    $("bytecodeStatus").textContent =
+      "V7 bytecode: Loaded (" +
+      ((bytecode.length - 2) / 2) + " bytes)";
+    $("bytecodeStatus").className = "good";
+
+    showStatus(
+      "Basic checks passed. Deployment remains locked pending further verification.",
+      "good"
+    );
+
+  } catch (error) {
+    showStatus(
+      "Check failed: " + (error.message || String(error)),
+      "bad"
+    );
+  } finally {
+    button.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
