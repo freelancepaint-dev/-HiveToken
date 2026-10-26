@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HIVE V7 Mainnet Launchpad</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#0c140f;color:#f5f7f2;font:16px/1.6 Arial,sans-serif}
+main{max-width:680px;margin:auto}
+h1{color:#ffd45c;font-size:27px}
+h2{font-size:19px}
+.panel{background:#19251d;border:1px solid #405443;border-radius:15px;padding:18px;margin:16px 0;overflow-wrap:anywhere}
+button{width:100%;padding:15px;margin:8px 0;background:#ffd45c;color:#111;border:0;border-radius:11px;font-size:17px;font-weight:bold}
+button:disabled{background:#626c64;color:#ddd}
+.warn{color:#ffd45c}
+.good{color:#76f6a3}
+.bad{color:#ff8585}
+small{color:#c0c9c0}
+code{overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+<h1>🐝 HIVE V7 Launchpad</h1>
+<p class="warn">BNB SMART CHAIN MAINNET — PREVIEW MODE</p>
+
+<div class="panel">
+<h2>Launch Settings</h2>
+<p><b>Total supply:</b> 1,000,000 HIVE</p>
+<p><b>Liquidity tokens:</b> 850,000 HIVE</p>
+<p><b>Initial BNB liquidity:</b> Approximately $300</p>
+<p><b>Remaining tokens:</b> 150,000 HIVE</p>
+<p><b>Buy tax:</b> 2.5%</p>
+<p><b>Sell tax:</b> 2.5%</p>
+<p><b>Funding:</b> Manual, 100 HIVE per batch</p>
+</div>
+
+<div class="panel">
+<h2>Mainnet Contracts</h2>
+<p><b>PancakeSwap V2 Router</b></p>
+<small><code>0x10ED43C718714eb63d5aA57B78B54704E256024E</code></small>
+<p><b>BnBee Funding Receiver</b></p>
+<small><code>0x9dE16778D63953B3F778128B1D5cA0c88B797c72</code></small>
+</div>
+
+<div class="panel">
+<h2>1. Connect Wallet</h2>
+<button id="connect">Connect MetaMask</button>
+<p id="wallet">Wallet not connected</p>
+<p id="network">Network not checked</p>
+</div>
+
+<div class="panel">
+<h2>2. Deployment</h2>
+<p class="warn">Locked until contract verification and safety checks are completed.</p>
+<button disabled>Deploy HIVE V7</button>
+</div>
+
+<div class="panel">
+<h2>3. Add Liquidity</h2>
+<p>Planned: 850,000 HIVE plus approximately $300 in BNB.</p>
+<button disabled>Add PancakeSwap Liquidity</button>
+</div>
+
+<div class="panel">
+<h2>4. Manual BnBee Funding</h2>
+<p>Funding becomes available after sufficient HIVE taxes accumulate.</p>
+<button disabled>Execute Funding</button>
+</div>
+
+<div class="panel">
+<h2>Safety Checks</h2>
+<p>☐ Verify V7 source and deployment bytecode</p>
+<p>☐ Confirm deployed BnBee receiver compatibility</p>
+<p>☐ Configure funding minimum before locking pair</p>
+<p>☐ Review liquidity, slippage and LP token custody</p>
+<p>☐ Complete mainnet transaction checks</p>
+<small>HIVE V7 is unaudited. Never share your seed phrase or private key.</small>
+</div>
+</main>
+
+<script>
+"use strict";
+const connect = document.getElementById("connect");
+const wallet = document.getElementById("wallet");
+const network = document.getElementById("network");
+
+connect.onclick = async function () {
+  if (!window.ethereum || !window.ethereum.request) {
+    wallet.textContent = "Open this page in MetaMask browser.";
+    return;
+  }
+
+  connect.disabled = true;
+
+  try {
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts"
+    });
+
+    wallet.textContent = accounts.length
+      ? "Connected: " + accounts[0]
+      : "No wallet connected";
+
+    const chain = await window.ethereum.request({
+      method: "eth_chainId"
+    });
+
+    if (chain === "0x38") {
+      network.textContent = "BSC Mainnet (56) — Connected";
+      network.className = "good";
+    } else {
+      network.textContent =
+        "Wrong network: " + parseInt(chain, 16);
+      network.className = "bad";
+    }
+  } catch (error) {
+    wallet.textContent =
+      "Connection failed: " + (error.message || error);
+    wallet.className = "bad";
+  } finally {
+    connect.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
